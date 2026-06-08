@@ -1478,6 +1478,20 @@ function applyImport(kind, items) {
   if (!Array.isArray(items)) return 0;
   let n = 0;
   items.forEach(it => {
+    if (kind === 'txn') {
+      state.transactions = state.transactions || [];
+      state.transactions.push({
+        id: genId('txn'),
+        date: String((it && it.d) || '').trim(),
+        name: String((it && it.n) || '').trim() || 'Transaction',
+        debit: Number(it && it.db) || 0,
+        credit: Number(it && it.cr) || 0,
+        currency: String((it && it.c) || '').trim() || '',
+        ts: Date.now(),
+      });
+      n++;
+      return;
+    }
     const amt = Number(it && it.a);
     if (!isFinite(amt)) return;
     const ccy = ccyOf(it.c);
@@ -1494,18 +1508,6 @@ function applyImport(kind, items) {
       n++;
     } else if (kind === 'receipt') {
       state.orders.push({ id: genId('ord'), name, amountCHF, enteredAmount: amt, enteredCurrency: ccy, fromAccountId: null, date: null, ts: Date.now(), deductedAt: null, pctAtDeduction: null, deductedFromName: null });
-      n++;
-    } else if (kind === 'txn') {
-      state.transactions = state.transactions || [];
-      state.transactions.push({
-        id: genId('txn'),
-        date: String((it && it.d) || '').trim(),
-        name: String((it && it.n) || '').trim() || 'Transaction',
-        debit: Number(it && it.db) || 0,
-        credit: Number(it && it.cr) || 0,
-        currency: String((it && it.c) || '').trim() || '',
-        ts: Date.now(),
-      });
       n++;
     }
   });
@@ -1581,7 +1583,7 @@ async function runImport(kind, file) {
     }
     if (items === null) throw lastErr || new Error('Could not read that screenshot.');
     const count = applyImport(kind, items);
-    const noun = kind === 'statement' ? (count === 1 ? 'account' : 'accounts') : kind === 'subs' ? (count === 1 ? 'subscription' : 'subscriptions') : (count === 1 ? 'order' : 'orders');
+    const noun = kind === 'statement' ? (count === 1 ? 'account' : 'accounts') : kind === 'subs' ? (count === 1 ? 'subscription' : 'subscriptions') : kind === 'txn' ? (count === 1 ? 'transaction' : 'transactions') : (count === 1 ? 'order' : 'orders');
     if (kind === 'statement') state.activeTab = 'net'; else if (kind === 'subs') state.activeTab = 'subs'; else if (kind === 'txn') state.activeTab = 'txn'; else state.activeTab = 'orders';
     ui.importBusy = false; ui.importResult = { count, noun };
     save(); render();
