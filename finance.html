@@ -599,7 +599,7 @@ let rates = Object.assign({}, DEFAULT_RATES);
 
 /* ---- API keys / settings (stored only in this browser) ---- */
 const SETTINGS_KEY = 'finance_settings_v1';
-const DEFAULT_MODEL = 'claude-haiku-4-5'; // cheapest vision-capable model — never use Sonnet/Opus for OCR
+const DEFAULT_MODEL = 'claude-haiku-4-5-20251001'; // cheapest vision-capable model — never use Sonnet/Opus for OCR
 function loadSettings() {
   try { return Object.assign({ finnhubKey: '', anthropicKey: '', anthropicModel: DEFAULT_MODEL }, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); }
   catch { return { finnhubKey: '', anthropicKey: '', anthropicModel: DEFAULT_MODEL }; }
