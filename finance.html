@@ -1408,7 +1408,7 @@ function importModalHtml() {
     body = '<div class="importStatus error"><div class="importStatusTitle">Import failed</div><div class="importStatusBody">' + esc(ui.importError) + '</div></div>'
       + '<label class="dropZone clickable"><input type="file" accept="image/*" data-importfile="' + ui.importOpen + '" style="display:none" /><div class="dropIcon">↗</div><div class="dropTitle">Try another screenshot</div><div class="dropSub">PNG · JPG</div></label>';
   } else if (ui.importResult) {
-    body = '<div class="importStatus"><div class="dropIcon" style="width:50px;height:50px;font-size:24px">✓</div><div class="importStatusTitle">Added ' + ui.importResult.count + ' ' + esc(ui.importResult.noun) + '</div><div class="importStatusBody">' + (ui.importResult.count ? 'Review them below — every value is editable.' : 'Claude couldn\'t read any items from that image. Try a clearer screenshot.') + '</div></div>'
+    body = '<div class="importStatus"><div class="dropIcon" style="width:50px;height:50px;font-size:24px">✓</div><div class="importStatusTitle">Added ' + ui.importResult.count + ' ' + esc(ui.importResult.noun) + '</div><div class="importStatusBody">' + (ui.importResult.count ? 'Review them below — every value is editable.' : ui.importResult.total > 0 ? 'All ' + ui.importResult.total + ' items already imported — no duplicates added.' : 'Claude couldn\'t read any items from that image. Try a clearer screenshot.') + '</div></div>'
       + '<div class="settingsActions"><button type="button" class="ghostBtn" data-act="closeImport">Done</button><label class="quickAddBtn" style="height:38px;display:inline-flex;align-items:center;cursor:pointer"><input type="file" accept="image/*" data-importfile="' + ui.importOpen + '" style="display:none" />Import another</label></div>';
   } else {
     body = '<p class="importDesc">' + c.desc + '</p>'
@@ -1615,7 +1615,7 @@ async function runImport(kind, file) {
     const count = applyImport(kind, items);
     const noun = kind === 'statement' ? (count === 1 ? 'account' : 'accounts') : kind === 'subs' ? (count === 1 ? 'subscription' : 'subscriptions') : kind === 'txn' ? (count === 1 ? 'transaction' : 'transactions') : (count === 1 ? 'order' : 'orders');
     if (kind === 'statement') state.activeTab = 'net'; else if (kind === 'subs') state.activeTab = 'subs'; else if (kind === 'txn') state.activeTab = 'txn'; else state.activeTab = 'orders';
-    ui.importBusy = false; ui.importResult = { count, noun };
+    ui.importBusy = false; ui.importResult = { count, noun, total: items.length };
     save(); render();
   } catch (err) {
     ui.importBusy = false;
