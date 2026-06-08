@@ -1470,7 +1470,7 @@ async function callExtract(kind, img) {
       model: settings.anthropicModel || DEFAULT_MODEL,
       max_tokens: 500,
       temperature: 0,
-      system: [{ type: 'text', text: EXTRACT_SYSTEM, cache_control: { type: 'ephemeral' } }],
+      system: EXTRACT_SYSTEM,
       tools: [EXTRACT_TOOL],
       tool_choice: { type: 'tool', name: 'extract' },
       messages: [{ role: 'user', content: [
@@ -1480,10 +1480,13 @@ async function callExtract(kind, img) {
     }),
   });
   const j = await r.json();
-  if (j.error) { const e = new Error(j.error.message || ('Anthropic API error (HTTP ' + r.status + ')')); e.status = r.status; throw e; }
-  if (IS_DEV) { const u = j.usage || {}; console.log('[finance import] ' + kind + ' ' + img.w + '×' + img.h, { in: u.input_tokens, out: u.output_tokens, cache_write: u.cache_creation_input_tokens, cache_read: u.cache_read_input_tokens }); }
+  if (!r.ok || j.type === 'error' || j.error) {
+    const msg = (j.error && j.error.message) || (j.message) || ('Anthropic API error (HTTP ' + r.status + ')');
+    const e = new Error(msg); e.status = r.status; throw e;
+  }
+  const u = j.usage || {}; console.log('[finance import]', kind, { model: j.model, stop: j.stop_reason, in: u.input_tokens, out: u.output_tokens, content: j.content });
   const block = (j.content || []).find(b => b.type === 'tool_use' && b.name === 'extract');
-  if (!block || !block.input || !Array.isArray(block.input.items)) throw new Error('The model did not return the expected structure.');
+  if (!block || !block.input || !Array.isArray(block.input.items)) throw new Error('Unexpected response (stop=' + j.stop_reason + '). Open browser console for details.');
   return block.input.items;
 }
 async function runImport(kind, file) {
