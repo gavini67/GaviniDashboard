@@ -1468,7 +1468,7 @@ async function callExtract(kind, img) {
     },
     body: JSON.stringify({
       model: settings.anthropicModel || DEFAULT_MODEL,
-      max_tokens: 500,
+      max_tokens: 4096,
       temperature: 0,
       system: EXTRACT_SYSTEM,
       tools: [EXTRACT_TOOL],
