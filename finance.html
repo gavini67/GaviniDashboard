@@ -1552,7 +1552,7 @@ async function callExtract(kind, img) {
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: settings.anthropicModel || DEFAULT_MODEL,
+      model: isTxn ? 'claude-sonnet-4-6' : (settings.anthropicModel || DEFAULT_MODEL),
       max_tokens: 4096,
       temperature: 0,
       system: isTxn ? TXN_SYSTEM : EXTRACT_SYSTEM,
@@ -1633,8 +1633,9 @@ function txnViewHtml() {
           + '</div>';
       }).join('') + '</div>';
 
+  const clearAllBtn = txns.length > 0 ? '<button type="button" class="clearHistBtn" data-act="clearAllTxn">clear all</button>' : '';
   return '<section class="section">'
-    + '<div class="sectionEyebrow"><span>Transactions</span><span class="sectionCount">' + txns.length + ' ' + (txns.length === 1 ? 'entry' : 'entries') + '</span></div>'
+    + '<div class="sectionEyebrow"><span>Transactions</span><span class="sectionCount">' + txns.length + ' ' + (txns.length === 1 ? 'entry' : 'entries') + '</span>' + clearAllBtn + '</div>'
     + importBtn + statBar + list + '</section>';
 }
 
@@ -1816,6 +1817,7 @@ document.addEventListener('click', e => {
     case 'addWish': { const d = ui.drafts.wish; const a = parseFloat(d.amount); if (!d.name.trim() || isNaN(a)) break; actions.addWish(d.name, a); ui.drafts.wish = { name: '', amount: '' }; render(); break; }
     case 'delWish': actions.deleteWish(id); break;
     case 'delTxn': { state.transactions = (state.transactions || []).filter(t => t.id !== id); save(); render(); break; }
+    case 'clearAllTxn': { if (confirm('Delete all ' + (state.transactions || []).length + ' transactions?')) { state.transactions = []; save(); render(); } break; }
 
     case 'clearNwHistory': { state.netWorthHistory = []; state.activity = []; save(); render(); break; }
 
