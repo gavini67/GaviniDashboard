@@ -36,18 +36,17 @@ Vercel serverless functions live in `api/`.
 
 ### 6. OCR decimal misread — `760.00` extracted as `76000` (`finance.html`)
 **Symptom:** Transaction amounts ×100 for values ending in `.00` (e.g. PHP 760.00 → PHP 76,000).
-**Cause:** Vision model dropped the decimal point, treating `760.00` as `76000`.
-**Fix:** Added a prominent `=== NUMBER FORMAT ===` block to `TXN_SYSTEM` with explicit rules and before/after examples:
-- `"100.00" → 100`, `"760.00" → 760`, `"17,000.00" → 17000`
-- Commas are thousands separators; period is decimal.
-**Rule:** When prompting for numeric extraction from financial screenshots, always include explicit decimal/comma format rules with examples. Don't assume the model infers this from context.
+**Cause:** Haiku's vision misreads the decimal point in financial table cells, producing `10000` instead of `100.00`. Prompt warnings alone (`"100.00 → 100 NOT 10000"`) did not fix it. Changing schema to `type:string` and parsing in JS also did not fix it — the model still output the wrong string.
+**Root cause:** Haiku is not accurate enough for precise financial table OCR.
+**Fix:** Txn imports use `claude-sonnet-4-6` hardcoded (not the user-configurable model). Sonnet reads the numbers correctly. Schema uses `type:string` for `db`/`cr` and `parseTxnAmt()` strips non-numeric chars and `parseFloat()`s.
+**Rule:** For financial data where exact numbers matter, use Sonnet not Haiku. Don't fight model accuracy with prompt engineering — switch the model.
 
 ---
 
 ## Architecture reminders
 
 - `finance.html` import pipeline: `runImport` → `downscaleImage` → `callExtract` (Anthropic API) → `applyImport` → `save` / `render`
-- `callExtract` picks `TXN_SYSTEM`/`TXN_TOOL` when `kind === 'txn'`, else `EXTRACT_SYSTEM`/`EXTRACT_TOOL`
+- `callExtract` picks `TXN_SYSTEM`/`TXN_TOOL` + hardcodes `claude-sonnet-4-6` when `kind === 'txn'`, else uses `EXTRACT_SYSTEM`/`EXTRACT_TOOL` + user-configured model
 - `applyImport` `txn` branch runs first (before the `isFinite(it.a)` guard), all other kinds run after
 - localStorage key: `finance_standalone_v1`
 - State shape: `{ accounts, subscriptions, orders, wishlist, activity, netWorthHistory, transactions, currency, activeTab }`
