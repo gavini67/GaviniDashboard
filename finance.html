@@ -479,6 +479,9 @@ body {
 .txnAmt { font-family: var(--font-mono); font-size: 13px; font-weight: 700; }
 .txnAmt.pos { color: var(--pos); }
 .txnAmt.neg { color: var(--neg); }
+.txnTypeSeg { display:flex; gap: 3px; }
+.txnTypeBtn { appearance:none; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-pill); color: var(--muted); font-family: var(--font-ui); font-size: 11px; font-weight: 600; padding: 6px 12px; cursor: pointer; transition: background var(--duration), color var(--duration); white-space:nowrap; }
+.txnTypeBtn.active { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
 
 /* Empty states */
 .emptyState { padding: var(--space-8) var(--space-5); text-align:center; background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); margin-bottom: var(--space-4); }
@@ -645,6 +648,7 @@ const ui = {
     subEdit: null,
     order: { mode: 'incoming', name: '', cost: '', from: '', arrival: '' },
     wish: { name: '', amount: '' },
+    txnAdd: { date: '', name: '', type: 'debit', amount: '', currency: 'PHP' },
   },
 };
 
@@ -1331,15 +1335,14 @@ const TXN_SYSTEM = [
   '- n: transaction description — merchant name or transfer label. Keep concise.',
   '- db: debit amount string EXACTLY as it appears in the image — copy every character including the decimal point (e.g. "100.00", "760.00", "1,658.00"). Omit if the cell is 0.00 or blank.',
   '- cr: credit amount string EXACTLY as it appears in the image — copy every character including the decimal point (e.g. "700.00", "17,000.00"). Omit if the cell is 0.00 or blank.',
+  '- rb: running balance string EXACTLY as it appears — copy including decimal (e.g. "628.03", "1,388.03"). Always include this — it is used to verify debit/credit direction.',
   '- c: currency code inferred from context — "PHP","USD","EUR","GBP","CHF". Omit if unsure.',
   '',
-  'Rules: extract EVERY transaction row; skip column header rows and footer notes; use only the Debits and Credits columns — NEVER use the Running Balance column for amounts; omit any field you are unsure of; if nothing readable, return empty items array.',
+  'Rules: extract EVERY transaction row in order; skip column header rows and footer notes; for db/cr use only the Debits and Credits columns; for rb use the Running Balance column; omit any field you are unsure of; if nothing readable, return empty items array.',
   '',
   'Examples (Credits col | Debits col | Running Balance col):',
-  '"05-10-2026 | Card payment at GRAB       |    0.00 | 760.00  | 628.03"   -> {"d":"05-10-2026","n":"Card payment at GRAB","db":"760.00","c":"PHP"}',
-  '"05-10-2026 | Inbound interbank transfer  | 700.00  |   0.00  | 1388.03"  -> {"d":"05-10-2026","n":"Inbound interbank transfer","cr":"700.00","c":"PHP"}',
-  '"05-25-2026 | Transfer from N. GO GoTyme  |17000.00 |   0.00  | 17002.54" -> {"d":"05-25-2026","n":"Transfer from N. GO GoTyme Bank","cr":"17000.00","c":"PHP"}',
-  '"05-25-2026 | Card payment TICKETMASTER   |    0.00 |15700.00 |  1302.54" -> {"d":"05-25-2026","n":"Card payment TICKETMASTER","db":"15700.00","c":"PHP"}',
+  '"05-10-2026 | Card payment at GRAB       |    0.00 | 760.00  | 628.03"   -> {"d":"05-10-2026","n":"Card payment at GRAB","db":"760.00","rb":"628.03","c":"PHP"}',
+  '"05-10-2026 | Inbound interbank transfer  | 700.00  |   0.00  | 1388.03"  -> {"d":"05-10-2026","n":"Inbound interbank transfer","cr":"700.00","rb":"1388.03","c":"PHP"}',
 ].join('\n');
 const TXN_TOOL = {
   name: 'extract',
@@ -1356,6 +1359,7 @@ const TXN_TOOL = {
             n: { type: 'string' },
             db: { type: 'string', description: 'Debit amount exactly as shown, e.g. "100.00" or "1,658.00"' },
             cr: { type: 'string', description: 'Credit amount exactly as shown, e.g. "700.00" or "17,000.00"' },
+            rb: { type: 'string', description: 'Running balance exactly as shown, e.g. "628.03" or "1,388.03"' },
             c: { type: 'string' },
           },
           required: ['n'],
@@ -1477,9 +1481,27 @@ async function downscaleImage(file) {
 
 function ccyOf(v) { const c = String(v || '').toUpperCase(); return CURRENCIES.indexOf(c) >= 0 ? c : 'CHF'; }
 function parseTxnAmt(v) { if (v == null || v === '') return 0; const s = String(v).replace(/[^0-9.]/g, ''); return parseFloat(s) || 0; }
+function verifyTxnDirections(items) {
+  // Use consecutive running balances to auto-correct wrong debit/credit direction.
+  // If rb[i] - rb[i-1] ≈ -(cr - db), the direction was flipped — swap them.
+  for (let i = 1; i < items.length; i++) {
+    const prev = parseTxnAmt(items[i-1].rb), cur = parseTxnAmt(items[i].rb);
+    if (!prev || !cur) continue;
+    const actualChange = cur - prev;
+    const db = parseTxnAmt(items[i].db), cr = parseTxnAmt(items[i].cr);
+    const extractedChange = cr - db;
+    if (Math.abs(actualChange - extractedChange) > 0.005 && Math.abs(actualChange + extractedChange) < 0.01) {
+      // direction is flipped — swap db and cr strings
+      const tmpDb = items[i].db, tmpCr = items[i].cr;
+      items[i].db = tmpCr; items[i].cr = tmpDb;
+    }
+  }
+  return items;
+}
 function applyImport(kind, items) {
   if (!Array.isArray(items)) return 0;
   let n = 0;
+  if (kind === 'txn') items = verifyTxnDirections(items);
   items.forEach(it => {
     if (kind === 'txn') {
       state.transactions = state.transactions || [];
@@ -1633,10 +1655,23 @@ function txnViewHtml() {
           + '</div>';
       }).join('') + '</div>';
 
+  const d = ui.drafts.txnAdd;
+  const typeOpts = ['debit','credit'].map(t => '<button type="button" class="txnTypeBtn' + (d.type === t ? ' active' : '') + '" data-act="txnType" data-t="' + t + '">' + t + '</button>').join('');
+  const ccyOpts = CURRENCIES.map(c => '<option value="' + c + '"' + (c === d.currency ? ' selected' : '') + '>' + c + '</option>').join('');
+  const addForm = '<div class="addCard"><div class="addEyebrow">+ add manually</div>'
+    + '<div class="addGrid" style="grid-template-columns:130px 1fr 110px auto auto">'
+    + '<input class="quickAddInput" type="date" value="' + esc(d.date) + '" data-draft="txnAdd.date" />'
+    + '<input class="quickAddInput" type="text" placeholder="Description" value="' + esc(d.name) + '" data-draft="txnAdd.name" data-enter="addTxn" />'
+    + '<input class="quickAddInput" type="number" step="0.01" placeholder="Amount" value="' + esc(d.amount) + '" data-draft="txnAdd.amount" data-enter="addTxn" />'
+    + '<select class="quickAddInput" data-draft="txnAdd.currency">' + ccyOpts + '</select>'
+    + '<div class="txnTypeSeg">' + typeOpts + '</div>'
+    + '<button type="button" class="quickAddBtn" data-act="addTxn">Add</button>'
+    + '</div></div>';
+
   const clearAllBtn = txns.length > 0 ? '<button type="button" class="clearHistBtn" data-act="clearAllTxn">clear all</button>' : '';
   return '<section class="section">'
     + '<div class="sectionEyebrow"><span>Transactions</span><span class="sectionCount">' + txns.length + ' ' + (txns.length === 1 ? 'entry' : 'entries') + '</span>' + clearAllBtn + '</div>'
-    + importBtn + statBar + list + '</section>';
+    + importBtn + addForm + statBar + list + '</section>';
 }
 
 function viewHtml() {
@@ -1818,6 +1853,16 @@ document.addEventListener('click', e => {
     case 'delWish': actions.deleteWish(id); break;
     case 'delTxn': { state.transactions = (state.transactions || []).filter(t => t.id !== id); save(); render(); break; }
     case 'clearAllTxn': { if (confirm('Delete all ' + (state.transactions || []).length + ' transactions?')) { state.transactions = []; save(); render(); } break; }
+    case 'txnType': { ui.drafts.txnAdd.type = btn.dataset.t; render(); break; }
+    case 'addTxn': {
+      const d = ui.drafts.txnAdd;
+      const amt = parseFloat(d.amount);
+      if (!d.name.trim() || isNaN(amt) || amt <= 0) break;
+      state.transactions = state.transactions || [];
+      state.transactions.push({ id: genId('txn'), date: d.date, name: d.name.trim(), debit: d.type === 'debit' ? amt : 0, credit: d.type === 'credit' ? amt : 0, currency: d.currency, ts: Date.now() });
+      ui.drafts.txnAdd = { date: d.date, name: '', type: d.type, amount: '', currency: d.currency };
+      save(); render(); break;
+    }
 
     case 'clearNwHistory': { state.netWorthHistory = []; state.activity = []; save(); render(); break; }
 
