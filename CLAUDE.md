@@ -43,6 +43,30 @@ Vercel serverless functions live in `api/`.
 
 ---
 
+## Dashboard-wide fixes applied (June 2026)
+
+### A. Cloud sync floating button removed (`cloud-sync.js`)
+**Problem:** Every page showed a "☁ Cloud sync" pill button bottom-right.
+**Fix:** `cloud-sync.js` replaced with a no-op IIFE — the file is still included by all pages so no script tags needed updating. Actual sync runs via `db.js` (untouched).
+
+### B. Onboarding popup guard + settings gear (`index.html`)
+**Problem:** Profile modal could reopen if saved object lacked `onboarded:true`.
+**Fix:** Guard changed from `if (!profile)` to `if (!profile || !profile.onboarded)`. `saveProfile()` already sets `onboarded:true` on every save.
+Added `.gearBtn` (⚙) button in `headerHtml` → `headerControls` — always visible, triggers `data-action="open-profile"`.
+
+### C. Progress page wired to real gym data (`progress.html`)
+**Problem:** `trainingHtml()` and `compHtml()` used hardcoded sample `LIFTS` / `COMPOSITION` constants.
+**Fix:** Replaced with `loadGymLifts()` and `loadGymComposition()` that read from `po_coach_v1` localStorage.
+- `loadGymLifts()`: finds per-exercise PRs/regressions over last 90 days, returns null if no gym data → section hidden.
+- `loadGymComposition()`: computes weight slope from `progress_standalone_v1` entries + volume trend from gym logs. Returns null if insufficient data → section hidden.
+- Removed "shown here as a sample" note from composition section.
+
+### D. Rebrand Patron → Gavin
+- `manifest.webmanifest`: `"name": "Patron — Rowan"` → `"name": "Gavin"`, `"short_name": "Patron"` → `"short_name": "Gavin"`
+- All 11 HTML files: `<meta name="apple-mobile-web-app-title" content="Patron">` → `content="Gavin"`
+
+---
+
 ## Architecture reminders
 
 - `finance.html` import pipeline: `runImport` → `downscaleImage` → `callExtract` (Anthropic API) → `applyImport` → `save` / `render`

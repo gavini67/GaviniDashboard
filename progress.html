@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Patron" />
+<meta name="apple-mobile-web-app-title" content="Gavin" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="icon" type="image/svg+xml" href="icon.svg" />
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
@@ -258,15 +258,81 @@ function compress(dataUrl,maxDim,q){return new Promise(res=>{const img=new Image
 
 const CHART_WINDOW=30,AVG_WINDOW=7;
 
-/* ===================== Static demo data (workout-fed in hosted app) ===================== */
-const LIFTS=[
-  {id:'l1',exerciseName:'Barbell bench',kind:'pr_reps',currentReps:7,previousReps:5,currentWeightKg:85,previousWeightKg:85},
-  {id:'l2',exerciseName:'Barbell bench',kind:'pr_weight',currentWeightKg:85,previousWeightKg:80,currentReps:5,previousReps:5},
-  {id:'l3',exerciseName:'Back squat',kind:'pr_weight',currentWeightKg:120,previousWeightKg:115,currentReps:5,previousReps:5},
-  {id:'l4',exerciseName:'Deadlift',kind:'pr_reps',currentReps:6,previousReps:4,currentWeightKg:140,previousWeightKg:140},
-  {id:'l5',exerciseName:'Overhead press',kind:'regress_weight',currentWeightKg:50,previousWeightKg:55,currentReps:5,previousReps:5},
-];
-const COMPOSITION={phase:'recomp',weightSlopeKgPerWeek:0,volumeTrendPct:143,estimatedLeanKgPerWeek:null,estimatedFatKgPerWeek:null,windowDays:28,confidence:30};
+/* ===================== Live gym data (reads from po_coach_v1) ===================== */
+function loadGymLifts(){
+  try{
+    const raw=localStorage.getItem('po_coach_v1');
+    if(!raw)return null;
+    const gym=JSON.parse(raw);
+    const exercises=gym.exercises||[],logs=gym.logs||{},gymUnits=gym.units||'kg';
+    const toKg=w=>gymUnits==='lb'?w*0.45359237:w;
+    const cut=new Date();cut.setDate(cut.getDate()-90);
+    const cutKey=cut.getFullYear()+'-'+String(cut.getMonth()+1).padStart(2,'0')+'-'+String(cut.getDate()).padStart(2,'0');
+    const lifts=[];
+    for(const ex of exercises){
+      const all=(logs[ex.id]||[]).sort((a,b)=>a.dateKey.localeCompare(b.dateKey));
+      const recent=all.filter(l=>l.dateKey>=cutKey);
+      if(recent.length<2)continue;
+      const byDate={};
+      for(const l of recent){
+        if(!byDate[l.dateKey]||l.weight>byDate[l.dateKey].weight||(l.weight===byDate[l.dateKey].weight&&l.reps>byDate[l.dateKey].reps))
+          byDate[l.dateKey]={weight:l.weight,reps:l.reps};
+      }
+      const dates=Object.keys(byDate).sort();
+      if(dates.length<2)continue;
+      const prev=byDate[dates[dates.length-2]],cur=byDate[dates[dates.length-1]];
+      let kind=null;
+      if(cur.weight>prev.weight)kind='pr_weight';
+      else if(cur.weight===prev.weight&&cur.reps>prev.reps)kind='pr_reps';
+      else if(cur.weight<prev.weight)kind='regress_weight';
+      if(kind)lifts.push({id:ex.id,exerciseName:ex.name,kind,currentWeightKg:toKg(cur.weight),previousWeightKg:toKg(prev.weight),currentReps:cur.reps,previousReps:prev.reps});
+    }
+    return lifts.length>0?lifts:null;
+  }catch{return null;}
+}
+function loadGymComposition(){
+  try{
+    const gymRaw=localStorage.getItem('po_coach_v1');
+    const progRaw=localStorage.getItem(LS);
+    const gym=gymRaw?JSON.parse(gymRaw):null;
+    const prog=progRaw?JSON.parse(progRaw):null;
+    const fmtK=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const d28=new Date();d28.setDate(d28.getDate()-28);const k28=fmtK(d28);
+    const d56=new Date();d56.setDate(d56.getDate()-56);const k56=fmtK(d56);
+    const entries=((prog&&prog.entries)||[]).sort((a,b)=>a.dateKey.localeCompare(b.dateKey));
+    const recentW=entries.filter(e=>e.dateKey>=k28);
+    let weightSlope=0;
+    if(recentW.length>=3){
+      const n=recentW.length,xs=recentW.map((_,i)=>i),ys=recentW.map(e=>e.weightKg);
+      const xm=xs.reduce((a,b)=>a+b,0)/n,ym=ys.reduce((a,b)=>a+b,0)/n;
+      const nd=xs.reduce((s,x,i)=>s+(x-xm)*(ys[i]-ym),0),dd=xs.reduce((s,x)=>s+(x-xm)**2,0);
+      weightSlope=dd>0?(nd/dd)*7:0;
+    }
+    let volumeTrend=null;
+    if(gym){
+      const logs=gym.logs||{},gymUnits=gym.units||'kg';
+      const toKg=w=>gymUnits==='lb'?w*0.45359237:w;
+      let vol1=0,vol2=0;
+      for(const id of Object.keys(logs))for(const l of logs[id]){
+        const v=toKg(l.weight||0)*(l.reps||0);
+        if(l.dateKey>=k28)vol1+=v;else if(l.dateKey>=k56)vol2+=v;
+      }
+      if(vol2>0)volumeTrend=((vol1-vol2)/vol2)*100;
+    }
+    if(recentW.length<3&&!gym)return null;
+    const wUp=weightSlope>0.15,wDown=weightSlope<-0.15;
+    const lUp=volumeTrend!=null&&volumeTrend>3,lDown=volumeTrend!=null&&volumeTrend<-3;
+    let phase;
+    if(recentW.length<5)phase='insufficient';
+    else if(!wUp&&!wDown&&lUp)phase='recomp';
+    else if(wUp&&lUp)phase='bulking';
+    else if(wUp&&!lUp)phase='fat_gain';
+    else if(wDown&&lUp)phase='cutting';
+    else if(wDown&&lDown)phase='losing';
+    else phase='holding';
+    return{phase,weightSlopeKgPerWeek:weightSlope,volumeTrendPct:volumeTrend,estimatedLeanKgPerWeek:null,estimatedFatKgPerWeek:null,windowDays:28,confidence:Math.min(100,recentW.length*8+(volumeTrend!==null?20:0))};
+  }catch{return null;}
+}
 const PHASE_LABEL={recomp:'Recomping',bulking:'Bulking',fat_gain:'Fat gain',cutting:'Cutting',losing:'Losing both',holding:'Holding',insufficient:'Calibrating'};
 const PHASE_SUB={recomp:'lifts up, weight steady, likely swapping fat for muscle',bulking:'weight up, lifts up. the gains are mostly muscle',fat_gain:'weight up, lifts flat. most of the gain is fat',cutting:'weight down, lifts preserved. fat loss with muscle held',losing:'weight down, lifts down. losing both',holding:'weight + lifts both steady. maintenance phase',insufficient:'log a few more weeks of weight + training to unlock this'};
 
@@ -366,13 +432,16 @@ function liftItem(s){
   return '<span class="tickerItem '+(isPR?'tickerItemUp':'tickerItemDown')+'"><span class="tickerArrow">'+arrow+'</span><span class="tickerName">'+esc(s.exerciseName)+'</span><span class="tickerSep">·</span><span class="tickerBody">'+body+'</span></span>';
 }
 function trainingHtml(){
-  if(!LIFTS.length)return '';
-  const items=LIFTS.map(s=>liftItem(s)).join('');
+  const lifts=loadGymLifts();
+  if(!lifts)return '';
+  const items=lifts.map(s=>liftItem(s)).join('');
   return '<section class="section"><div class="sectionEyebrow">training · last 90 days</div>'
     +'<div class="ticker"><div class="tickerBadge"><span class="tickerBadgeDot"></span>lifts</div><div class="tickerViewport"><div class="tickerTrack">'+items+items+'</div></div></div></section>';
 }
 function compHtml(){
-  const c=COMPOSITION,u=state.units;
+  const c=loadGymComposition();
+  if(!c)return '';
+  const u=state.units;
   const wDisp=kgToDisplay(c.weightSlopeKgPerWeek,u);
   const lean=c.estimatedLeanKgPerWeek==null?null:kgToDisplay(c.estimatedLeanKgPerWeek,u);
   const fat=c.estimatedFatKgPerWeek==null?null:kgToDisplay(c.estimatedFatKgPerWeek,u);
@@ -389,7 +458,7 @@ function compHtml(){
     +'<div class="compCard"><div><span class="compPhaseWord">'+PHASE_LABEL[c.phase]+'</span></div><p class="compPhaseSub">'+PHASE_SUB[c.phase]+'</p>'
     +(c.phase!=='insufficient'?'<div class="compPillRow">'+pillHtml+'</div>':'')
     +'<p class="compCaveat">estimate · not a body-fat measurement'+(c.confidence<35?' · low data':'')+'</p></div>'
-    +'<p class="noteLine">Lifts + composition read from your workout logs in the hosted app — shown here as a sample.</p></section>';
+    +'</section>';
 }
 
 /* ===================== Render: photos ===================== */

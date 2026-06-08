@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Patron" />
+<meta name="apple-mobile-web-app-title" content="Gavin" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="icon" type="image/svg+xml" href="icon.svg" />
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
@@ -113,6 +113,8 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
 .profileChip:hover { border-color: var(--brand-line); background: var(--brand-soft); }
 .profileChipNew { padding: 7px 14px; color: var(--brand); border-color: var(--brand-line); background: var(--brand-soft); }
 .profileAvatar { display:grid; place-items:center; width: 22px; height: 22px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); font-family: var(--font-display); font-weight: 700; font-size: 12px; }
+.gearBtn { appearance:none; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-pill); color: var(--muted); font-size: 15px; width: 34px; height: 34px; padding: 0; cursor: pointer; display:inline-flex; align-items:center; justify-content:center; transition: border-color var(--duration) var(--ease-premium), color var(--duration) var(--ease-premium); }
+.gearBtn:hover { border-color: var(--brand-line); color: var(--brand); }
 
 /* Daily reminders */
 .reminders { display:flex; align-items:center; flex-wrap:wrap; gap: var(--space-2); margin-bottom: var(--space-5); }
@@ -383,7 +385,7 @@ function headerHtml(){
     ? '<button type="button" class="profileChip" data-action="open-profile" title="Edit your profile"><span class="profileAvatar">' + esc((name || '·').charAt(0).toUpperCase()) + '</span>' + esc(name || 'Profile') + '</button>'
     : '<button type="button" class="profileChip profileChipNew" data-action="open-profile">Set up profile</button>';
   return '<header class="header"><div><h1 class="title">Gavin</h1><p class="subtitle">' + greeting + '</p></div>'
-    + '<div class="headerControls">' + themeSegHtml() + chip + '</div></header>';
+    + '<div class="headerControls">' + themeSegHtml() + chip + '<button type="button" class="gearBtn" data-action="open-profile" title="Settings" aria-label="Open settings">⚙</button></div></header>';
 }
 
 function vitalsTileHtml(){
@@ -751,7 +753,7 @@ window.addEventListener('storage', e => {
   if (e.key === HEALTH_KEY || e.key === LEGACY_WHOOP_KEY || e.key === null) { health = loadHealth(); render(); }
 });
 
-if (!profile) { ui.profileDraft = draftFromProfile(); ui.profileOpen = true; } // first run → onboarding prompt (init draft so typing is captured)
+if (!profile || !profile.onboarded) { ui.profileDraft = draftFromProfile(); ui.profileOpen = true; } // first run → onboarding prompt (init draft so typing is captured)
 applyTheme(currentTheme);
 
 // On a deployed host: pick up the OAuth return + pull the latest Whoop / Fitbit vitals.
