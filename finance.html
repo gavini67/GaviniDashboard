@@ -459,6 +459,10 @@ body {
 .wishRowBarFill { height: 100%; background: var(--pos); transition: width 320ms var(--ease-premium); }
 .wishRowBarFill.warn { background: var(--warn); } .wishRowBarFill.bad { background: var(--neg); }
 
+/* Clear history button */
+.clearHistBtn { appearance:none; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-pill); color: var(--muted); font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; padding: 4px 12px; cursor: pointer; transition: background var(--duration), color var(--duration); }
+.clearHistBtn:hover { background: var(--neg-soft, rgba(255,80,80,0.12)); color: var(--neg); border-color: var(--neg); }
+
 /* Transactions tab */
 .txnStats { display:flex; gap: var(--space-3); flex-wrap:wrap; margin-bottom: var(--space-4); }
 .txnStat { flex:1; min-width: 100px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
@@ -1065,7 +1069,9 @@ function netWorthViewHtml() {
   const breakdown = parts.join('  ·  ');
   const isFirstRun = state.accounts.length === 0;
   const cards = CATEGORY_ORDER.map(cat => cat.key === 'stocks' ? stocksCardHtml(netWorth) : accountCardHtml(cat, netWorth)).join('');
-  return '<section class="section"><div class="sectionEyebrow"><span>Net worth</span></div>'
+  const histCount = (state.netWorthHistory || []).length;
+  const clearHistBtn = histCount > 0 ? '<button type="button" class="clearHistBtn" data-act="clearNwHistory">clear history</button>' : '';
+  return '<section class="section"><div class="sectionEyebrow"><span>Net worth</span>' + clearHistBtn + '</div>'
     + '<div class="nwHero ' + (isFirstRun ? 'nwHeroFirstRun' : '') + '"><div class="nwHeroMain"><div class="nwHeroLabel">Total net worth</div>'
     + '<div class="nwHeroNumRow"><span class="nwHeroNum">' + esc(fmt(netWorth)) + '</span>' + dailyDeltaHtml() + '</div>'
     + (breakdown ? '<div class="nwHeroBreakdown">' + esc(breakdown) + '</div>' : '')
@@ -1804,6 +1810,8 @@ document.addEventListener('click', e => {
     case 'addWish': { const d = ui.drafts.wish; const a = parseFloat(d.amount); if (!d.name.trim() || isNaN(a)) break; actions.addWish(d.name, a); ui.drafts.wish = { name: '', amount: '' }; render(); break; }
     case 'delWish': actions.deleteWish(id); break;
     case 'delTxn': { state.transactions = (state.transactions || []).filter(t => t.id !== id); save(); render(); break; }
+
+    case 'clearNwHistory': { state.netWorthHistory = []; state.activity = []; save(); render(); break; }
 
     case 'import': ui.importOpen = btn.dataset.kind; ui.importBusy = false; ui.importError = null; ui.importResult = null; renderModal(); break;
     case 'closeImport': if (!stop || e.target.closest('.importClose')) { ui.importOpen = null; ui.importBusy = false; ui.importError = null; ui.importResult = null; render(); } break;
