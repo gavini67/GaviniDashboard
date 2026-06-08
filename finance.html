@@ -459,6 +459,23 @@ body {
 .wishRowBarFill { height: 100%; background: var(--pos); transition: width 320ms var(--ease-premium); }
 .wishRowBarFill.warn { background: var(--warn); } .wishRowBarFill.bad { background: var(--neg); }
 
+/* Transactions tab */
+.txnStats { display:flex; gap: var(--space-3); flex-wrap:wrap; margin-bottom: var(--space-4); }
+.txnStat { flex:1; min-width: 100px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+.txnStatLabel { display:block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px; }
+.txnStatValue { display:block; font-family: var(--font-mono); font-size: var(--text-base); font-weight: 600; color: var(--fg); }
+.txnStatValue.pos { color: var(--pos); }
+.txnStatValue.neg { color: var(--neg); }
+.txnList { display:flex; flex-direction:column; gap: var(--space-2); }
+.txnRow { display:flex; justify-content:space-between; align-items:center; gap: var(--space-3); padding: 11px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.txnRowLeft { display:flex; flex-direction:column; gap: 2px; flex:1; min-width: 0; }
+.txnDate { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.txnName { font-size: 13px; font-weight: 600; color: var(--fg); white-space: nowrap; overflow:hidden; text-overflow:ellipsis; }
+.txnRowRight { display:flex; align-items:center; gap: var(--space-2); flex-shrink:0; }
+.txnAmt { font-family: var(--font-mono); font-size: 13px; font-weight: 700; }
+.txnAmt.pos { color: var(--pos); }
+.txnAmt.neg { color: var(--neg); }
+
 /* Empty states */
 .emptyState { padding: var(--space-8) var(--space-5); text-align:center; background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); margin-bottom: var(--space-4); }
 .emptyTitle { font-family: var(--font-display); font-weight: 600; font-size: var(--text-lg); color: var(--muted-strong); margin-bottom: var(--space-2); }
@@ -519,9 +536,9 @@ body {
 const STORAGE_KEY = 'finance_standalone_v1';
 const ACTIVITY_MAX = 50;
 const NW_HISTORY_MAX = 500;
-const CURRENCIES = ['CHF', 'USD', 'EUR', 'GBP'];
-const TAB_KEYS = ['net', 'subs', 'orders', 'wish'];
-const TAB_LABELS = { net: 'net worth', subs: 'subs', orders: 'orders', wish: 'wishlist' };
+const CURRENCIES = ['CHF', 'USD', 'EUR', 'GBP', 'PHP'];
+const TAB_KEYS = ['net', 'subs', 'orders', 'wish', 'txn'];
+const TAB_LABELS = { net: 'net worth', subs: 'subs', orders: 'orders', wish: 'wishlist', txn: 'transactions' };
 const DEFAULT_RATES = { CHF: 1, USD: 1, EUR: 1, GBP: 1 };
 
 function genId(prefix) { return (prefix || 'id') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8); }
@@ -586,7 +603,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replac
 /* ============================================================
  * State + persistence
  * ============================================================ */
-const DEFAULT_STATE = { version: 1, currency: 'CHF', activeTab: 'net', accounts: [], subscriptions: [], orders: [], wishlist: [], activity: [], netWorthHistory: [] };
+const DEFAULT_STATE = { version: 1, currency: 'CHF', activeTab: 'net', accounts: [], subscriptions: [], orders: [], wishlist: [], activity: [], netWorthHistory: [], transactions: [] };
 
 function load() {
   try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return Object.assign({}, DEFAULT_STATE); return Object.assign({}, DEFAULT_STATE, JSON.parse(raw)); }
@@ -1235,6 +1252,7 @@ const IMPORT_COPY = {
   statement: { eyebrow: 'Import', title: 'Read a <em>statement</em> screenshot', desc: 'Drop a bank/brokerage screenshot and Claude reads every account and balance, then fills them in automatically.', dropTitle: 'Drop a statement screenshot' },
   subs: { eyebrow: 'Import', title: 'Pull <em>subscriptions</em> from a screenshot', desc: 'Snap your billing page and Claude detects every recurring subscription and adds them at once.', dropTitle: 'Drop a billing screenshot' },
   receipt: { eyebrow: 'Import', title: 'Auto-log a <em>receipt</em>', desc: 'Snap a receipt and Claude logs the purchase to your orders automatically.', dropTitle: 'Drop a receipt screenshot' },
+  txn: { eyebrow: 'Import', title: 'Read a <em>bank statement</em>', desc: 'Drop a screenshot of your transaction history — Claude extracts every row (date, merchant, amount) automatically.', dropTitle: 'Drop a bank statement screenshot' },
 };
 /* ------------------------------------------------------------------
  * Cheapest-possible screenshot OCR (see runImport for the full rationale).
@@ -1295,6 +1313,48 @@ const KIND_HINT = {
   statement: 'This screenshot is a bank/brokerage statement. Extract every account/balance line.',
   subs: 'This screenshot is a subscriptions/billing page. Extract every recurring subscription.',
   receipt: 'This screenshot is a purchase receipt. Extract the purchase (usually one order total).',
+};
+
+// Transaction-history extraction — separate prompt+schema from the balance extractor.
+const TXN_SYSTEM = [
+  'You are a precise bank statement transaction extractor. Read a screenshot of a bank account transaction history and extract every transaction row by calling the `extract` tool.',
+  '',
+  'Each element of `items`:',
+  '- d: date string exactly as shown (e.g. "05-10-2026").',
+  '- n: transaction description — merchant name or transfer label. Keep concise.',
+  '- db: debit amount (money going OUT), numeric, no symbols. Omit if zero.',
+  '- cr: credit amount (money coming IN), numeric, no symbols. Omit if zero.',
+  '- c: currency code inferred from context — "PHP","USD","EUR","GBP","CHF". Omit if unsure.',
+  '',
+  'Rules: extract EVERY transaction row; skip column header rows and footer notes; use the Debits and Credits columns only — ignore the Running Balance column; omit any field you are unsure of; if nothing readable, return empty items array.',
+  '',
+  'Examples:',
+  '"05-10-2026 | Card payment at GRAB | 0.00 | 760.00 | 628.03" -> {"d":"05-10-2026","n":"Card payment at GRAB","db":760,"c":"PHP"}',
+  '"05-10-2026 | Inbound interbank transfer | 700.00 | 0.00 | 1388.03" -> {"d":"05-10-2026","n":"Inbound interbank transfer","cr":700,"c":"PHP"}',
+].join('\n');
+const TXN_TOOL = {
+  name: 'extract',
+  description: 'Return every transaction row from the bank statement screenshot.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      items: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            d: { type: 'string' },
+            n: { type: 'string' },
+            db: { type: 'number' },
+            cr: { type: 'number' },
+            c: { type: 'string' },
+          },
+          required: ['n'],
+        },
+      },
+    },
+    required: ['items'],
+  },
 };
 
 function renderModal() {
@@ -1428,6 +1488,18 @@ function applyImport(kind, items) {
     } else if (kind === 'receipt') {
       state.orders.push({ id: genId('ord'), name, amountCHF, enteredAmount: amt, enteredCurrency: ccy, fromAccountId: null, date: null, ts: Date.now(), deductedAt: null, pctAtDeduction: null, deductedFromName: null });
       n++;
+    } else if (kind === 'txn') {
+      state.transactions = state.transactions || [];
+      state.transactions.push({
+        id: genId('txn'),
+        date: String((it && it.d) || '').trim(),
+        name: String((it && it.n) || '').trim() || 'Transaction',
+        debit: Number(it && it.db) || 0,
+        credit: Number(it && it.cr) || 0,
+        currency: String((it && it.c) || '').trim() || '',
+        ts: Date.now(),
+      });
+      n++;
     }
   });
   if (n) { maybeSnapshotNw(); save(); }
@@ -1458,6 +1530,7 @@ function applyImport(kind, items) {
  *  no route handler / sharp / tier-gate here — those are hosted-app concerns.
  * ============================================================ */
 async function callExtract(kind, img) {
+  const isTxn = kind === 'txn';
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -1470,8 +1543,8 @@ async function callExtract(kind, img) {
       model: settings.anthropicModel || DEFAULT_MODEL,
       max_tokens: 4096,
       temperature: 0,
-      system: EXTRACT_SYSTEM,
-      tools: [EXTRACT_TOOL],
+      system: isTxn ? TXN_SYSTEM : EXTRACT_SYSTEM,
+      tools: [isTxn ? TXN_TOOL : EXTRACT_TOOL],
       tool_choice: { type: 'tool', name: 'extract' },
       messages: [{ role: 'user', content: [
         { type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.b64 } },
@@ -1502,7 +1575,7 @@ async function runImport(kind, file) {
     if (items === null) throw lastErr || new Error('Could not read that screenshot.');
     const count = applyImport(kind, items);
     const noun = kind === 'statement' ? (count === 1 ? 'account' : 'accounts') : kind === 'subs' ? (count === 1 ? 'subscription' : 'subscriptions') : (count === 1 ? 'order' : 'orders');
-    if (kind === 'statement') state.activeTab = 'net'; else if (kind === 'subs') state.activeTab = 'subs'; else state.activeTab = 'orders';
+    if (kind === 'statement') state.activeTab = 'net'; else if (kind === 'subs') state.activeTab = 'subs'; else if (kind === 'txn') state.activeTab = 'txn'; else state.activeTab = 'orders';
     ui.importBusy = false; ui.importResult = { count, noun };
     save(); render();
   } catch (err) {
@@ -1515,10 +1588,49 @@ async function runImport(kind, file) {
 /* ============================================================
  * Render
  * ============================================================ */
+function txnViewHtml() {
+  const txns = state.transactions || [];
+  const sorted = txns.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const totalDebit = txns.reduce((s, t) => s + (Number(t.debit) || 0), 0);
+  const totalCredit = txns.reduce((s, t) => s + (Number(t.credit) || 0), 0);
+  const net = totalCredit - totalDebit;
+  const mainCcy = txns.length ? (txns[txns.length - 1].currency || '') : '';
+  const fmt2 = n => Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const importBtn = '<button type="button" class="importTrigger" data-act="import" data-kind="txn">'
+    + '<span class="importTriggerIcon" aria-hidden>↗</span>'
+    + '<span class="importTriggerText"><span class="importTriggerTitle">Import transactions</span>'
+    + '<span class="importTriggerSub">screenshot your bank statement</span></span></button>';
+
+  const statBar = txns.length ? '<div class="txnStats">'
+    + '<div class="txnStat"><span class="txnStatLabel">Money in</span><span class="txnStatValue pos">' + mainCcy + ' ' + fmt2(totalCredit) + '</span></div>'
+    + '<div class="txnStat"><span class="txnStatLabel">Money out</span><span class="txnStatValue neg">' + mainCcy + ' ' + fmt2(totalDebit) + '</span></div>'
+    + '<div class="txnStat"><span class="txnStatLabel">Net</span><span class="txnStatValue ' + (net >= 0 ? 'pos' : 'neg') + '">' + (net >= 0 ? '+' : '−') + ' ' + mainCcy + ' ' + fmt2(net) + '</span></div>'
+    + '</div>' : '';
+
+  const list = txns.length === 0
+    ? '<div class="emptyState"><div class="emptyTitle">No transactions yet.</div><div class="emptyBody">Import a bank statement screenshot above — Claude reads every row automatically.</div></div>'
+    : '<div class="txnList">' + sorted.map(t => {
+        const isDebit = (Number(t.debit) || 0) > 0;
+        const amt = isDebit ? (Number(t.debit) || 0) : (Number(t.credit) || 0);
+        const ccy = t.currency || '';
+        return '<div class="txnRow">'
+          + '<div class="txnRowLeft"><span class="txnDate">' + esc(t.date || '') + '</span><span class="txnName">' + esc(t.name) + '</span></div>'
+          + '<div class="txnRowRight"><span class="txnAmt ' + (isDebit ? 'neg' : 'pos') + '">' + (isDebit ? '−' : '+') + ' ' + esc(ccy) + ' ' + fmt2(amt) + '</span>'
+          + '<button type="button" class="iconBtn" data-act="delTxn" data-id="' + t.id + '" title="Remove">×</button></div>'
+          + '</div>';
+      }).join('') + '</div>';
+
+  return '<section class="section">'
+    + '<div class="sectionEyebrow"><span>Transactions</span><span class="sectionCount">' + txns.length + ' ' + (txns.length === 1 ? 'entry' : 'entries') + '</span></div>'
+    + importBtn + statBar + list + '</section>';
+}
+
 function viewHtml() {
   if (state.activeTab === 'net') return netWorthViewHtml();
   if (state.activeTab === 'subs') return subsViewHtml();
   if (state.activeTab === 'orders') return ordersViewHtml();
+  if (state.activeTab === 'txn') return txnViewHtml();
   return wishViewHtml();
 }
 function tabBarHtml() {
@@ -1691,6 +1803,7 @@ document.addEventListener('click', e => {
 
     case 'addWish': { const d = ui.drafts.wish; const a = parseFloat(d.amount); if (!d.name.trim() || isNaN(a)) break; actions.addWish(d.name, a); ui.drafts.wish = { name: '', amount: '' }; render(); break; }
     case 'delWish': actions.deleteWish(id); break;
+    case 'delTxn': { state.transactions = (state.transactions || []).filter(t => t.id !== id); save(); render(); break; }
 
     case 'import': ui.importOpen = btn.dataset.kind; ui.importBusy = false; ui.importError = null; ui.importResult = null; renderModal(); break;
     case 'closeImport': if (!stop || e.target.closest('.importClose')) { ui.importOpen = null; ui.importBusy = false; ui.importError = null; ui.importResult = null; render(); } break;
