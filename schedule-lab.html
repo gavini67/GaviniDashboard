@@ -1000,15 +1000,14 @@ function fullCfg(){ return { v:2, style:styleCfg(), wake:WAKE, tasks:TASKS.map(f
   rStart:(t.rStart==null?null:t.rStart), rEnd:(t.rEnd==null?null:t.rEnd), explicit:!!t.explicit, fill:!!t.fill }; }) }; }
 function labToast(msg){ var t=document.getElementById('labToast'); if(!t){ t=document.createElement('div'); t.id='labToast'; t.className='labToast'; document.body.appendChild(t); } t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(function(){ t.classList.remove('show'); },2600); }
 /* ---------- Send to Peak (one click — same browser) ----------
- * Writes a complete creator theme to peak_theme_v1 (accent → graph color,
- * background, card style) which Peak reads on load, plus the schedule to a
- * one-shot key Peak maps in and clears. No copy/paste needed. */
+ * Sends the LOOK only — accent → graph color, background, card style — to
+ * peak_theme_v1, which Peak reads on load. It does NOT touch your real
+ * schedule; the lab's tasks are just a design preview. */
 document.getElementById('sendPeak').addEventListener('click',function(){
   try{
     var cfg=fullCfg();
     localStorage.setItem('peak_theme_v1', JSON.stringify({ v:1, style:cfg.style, bg:S.bg, graph:{ color:S.acc } }));
-    localStorage.setItem('peak_lab_tasks_v1', JSON.stringify({ fromLab:true, ts:Date.now(), tasks:cfg.tasks }));
-    labToast('✓ Sent to Peak — open Peak (refresh if already open)');
+    labToast('✓ Sent the look to Peak — your schedule is untouched. Open Peak (refresh if open)');
   }catch(e){ labToast('Could not save — storage blocked'); }
 });
 
