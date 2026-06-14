@@ -514,8 +514,8 @@ let _themeOpen = false;
 
 // ===== CREATOR THEME (Design Labs: graph style + chart backdrop + bg) =====
 // A pasted PEAK-THEME (Schedule Lab) or {lab:'graph'} (Graph Lab) code is stored
-// here and overrides the chart look until reset. Codes come from schedule-lab.html
-// / graph-lab.html.
+// here and overrides the chart look until reset. Paste a PEAK-THEME or Graph
+// Lab code into the import box under the schedule.
 const PEAK_THEME = 'peak_theme_v1';
 function loadTheme(){ try{ const t=JSON.parse(localStorage.getItem(PEAK_THEME)||'null'); return (t&&(t.graph||t.bg||t.style))?t:null; }catch(e){ return null; } }
 function graphTheme(){ const t=loadTheme(); const g=(t&&t.graph)||{}; return { color:(typeof g.color==='string'&&g.color)?g.color:null, line:(g.line!=null?+g.line:null), glow:(g.glow!==false), backdrop:String(g.backdrop||'none').toLowerCase() }; }
@@ -913,7 +913,7 @@ function renderScheduleCard() {
         <textarea class="schThemeIn" id="themeCode" placeholder="Paste a PEAK-THEME… or Graph Lab code"></textarea>
         <button class="schThemeApply" data-action="theme-apply">Apply</button>
       </div>
-      <div class="schThemeHint">Design one in <a href="schedule-lab.html" style="color:var(--accent2)">Schedule Lab</a> or <a href="graph-lab.html" style="color:var(--accent2)">Graph Lab</a> → copy → paste here.${loadTheme()?' · <button class="schThemeReset" data-action="theme-reset">Reset to default</button>':''}</div>`:''}
+      <div class="schThemeHint">Paste a PEAK-THEME or Graph Lab code to restyle the chart.${loadTheme()?' · <button class="schThemeReset" data-action="theme-reset">Reset to default</button>':''}</div>`:''}
     </div>
   </div>`;
 }
