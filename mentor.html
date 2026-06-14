@@ -159,8 +159,13 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
 
   function nova(name, hold) { if (window.Nova) window.Nova.setExpression(name, hold || 0); }
 
+  // Running chat history so Nova remembers the conversation (not stateless).
+  const convo = [];
+  const HISTORY_MAX = 12; // last N turns sent each call to bound tokens
+
   // Calls the serverless proxy — the key lives only in the server env var.
-  async function askNova(userText) {
+  // `messages` is the conversation so far. Returns {ok, text}.
+  async function askNova(messages) {
     const data = readDashboardData();
     try {
       const res = await fetch('/api/mentor', {
@@ -175,22 +180,28 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
             "sleep, readiness, goals, supplements). Give honest, specific, " +
             "encouraging guidance across any area of their life — not just " +
             "nutrition, grounded in their real numbers.\n\n" +
+            "CONTINUITY: This is an ongoing conversation — the messages are the " +
+            "history. Do NOT re-summarize the user's whole situation every reply. " +
+            "Assume they remember what you already said; answer the NEW message " +
+            "directly and only bring up something again if it's newly relevant.\n\n" +
             "FORMAT (keep it light and scannable):\n" +
             "- Open with ONE short sentence — the headline takeaway.\n" +
             "- Then at most 2 short '## ' subheadings, each followed by 1-2 lines " +
             "or up to 3 bullets ('- '). Bold key numbers with **like this**.\n" +
             "- End with a line '## One move' and a single concrete action.\n" +
             "- NO markdown tables, NO '#' top-level headings, no emoji spam " +
-            "(one or two max). Keep the whole reply under ~120 words.\n\n" +
+            "(one or two max). Keep the whole reply under ~120 words.\n" +
+            "- For a quick follow-up, a sentence or two is fine — skip the " +
+            "headings when the answer is small.\n\n" +
             "Current dashboard data as JSON:\n" + JSON.stringify(data),
-          messages: [{ role: 'user', content: userText }],
+          messages,
         }),
       });
       const json = await res.json();
-      if (json.error) return "Hmm, I couldn't reach my brain just now — make sure ANTHROPIC_API_KEY is set in Vercel (or your .env for local dev).";
-      return json.content[0].text;
+      if (json.error || !json.content) return { ok: false, text: "Hmm, I couldn't reach my brain just now — make sure ANTHROPIC_API_KEY is set in Vercel (or your .env for local dev)." };
+      return { ok: true, text: json.content[0].text };
     } catch (e) {
-      return "Network hiccup — I couldn't reach the server. Try again in a moment.";
+      return { ok: false, text: "Network hiccup — I couldn't reach the server. Try again in a moment." };
     }
   }
 
@@ -246,6 +257,7 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
     if (!text || busy) return;
     busy = true; chatSend.disabled = true; chatInput.value = '';
     addUser(text);
+    convo.push({ role: 'user', content: text });
     nova('surprised');
 
     // coach bubble starts as the cozy loader
@@ -264,8 +276,13 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
     const rot = setInterval(() => { ci++; render(); scrollFeed(); }, 2200);
     setTimeout(() => nova('thinking'), 500);
 
-    const reply = await askNova(text);
+    const { ok, text: reply } = await askNova(convo.slice(-HISTORY_MAX));
     clearInterval(rot);
+
+    if (ok) {
+      convo.push({ role: 'assistant', content: reply });
+      if (convo.length > HISTORY_MAX) convo.splice(0, convo.length - HISTORY_MAX);
+    }
 
     const body = el.querySelector('.bubble');
     body.innerHTML = `<span class="tagchip">Nova</span><div class="bubble-text">${mdToHtml(reply)}</div>`;
