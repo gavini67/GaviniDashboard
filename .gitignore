@@ -1,0 +1,11 @@
+# Secrets — never commit the real key
+.env
+.env.local
+
+# Vercel
+.vercel
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+node_modules/
