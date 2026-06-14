@@ -54,6 +54,10 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
 /* ---- chat ---- */
 .chat{ border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); padding:20px; margin-top:22px;
   display:flex; flex-direction:column; gap:14px; box-shadow:0 18px 40px -28px rgba(0,0,0,.9); }
+.chatHead{ display:flex; align-items:center; justify-content:space-between; margin:-4px 0 -2px; }
+.chatHead[hidden]{ display:none; }
+.chatClear{ appearance:none; cursor:pointer; background:none; border:1px solid var(--line); color:var(--muted2); font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; padding:6px 12px; border-radius:var(--pill); transition:.2s; }
+.chatClear:hover{ border-color:var(--accent); color:var(--accent); }
 .feed{ display:flex; flex-direction:column; gap:14px; max-height:46vh; overflow-y:auto; padding-right:4px; }
 .feed::-webkit-scrollbar{ width:6px; } .feed::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.1); border-radius:99px; }
 .msg{ max-width:88%; }
@@ -122,6 +126,10 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
     </div>
 
     <div class="chat">
+      <div class="chatHead" id="chatHead" hidden>
+        <span class="eyebrow">Conversation</span>
+        <button class="chatClear" id="chatClear">Clear</button>
+      </div>
       <div class="feed" id="feed"></div>
       <div class="starters" id="starters"></div>
       <div class="composer">
@@ -162,6 +170,10 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
   // Running chat history so Nova remembers the conversation (not stateless).
   const convo = [];
   const HISTORY_MAX = 12; // last N turns sent each call to bound tokens
+  const CHAT_KEY = 'mentor_chat_v1'; // persists across reloads; user clears manually
+
+  function saveConvo(){ try{ localStorage.setItem(CHAT_KEY, JSON.stringify(convo)); }catch(e){} }
+  function updateHead(){ const h=document.getElementById('chatHead'); if(h) h.hidden = convo.length===0; }
 
   // Calls the serverless proxy — the key lives only in the server env var.
   // `messages` is the conversation so far. Returns {ok, text}.
@@ -258,6 +270,7 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
     busy = true; chatSend.disabled = true; chatInput.value = '';
     addUser(text);
     convo.push({ role: 'user', content: text });
+    saveConvo(); updateHead();
     nova('surprised');
 
     // coach bubble starts as the cozy loader
@@ -282,6 +295,7 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
     if (ok) {
       convo.push({ role: 'assistant', content: reply });
       if (convo.length > HISTORY_MAX) convo.splice(0, convo.length - HISTORY_MAX);
+      saveConvo();
     }
 
     const body = el.querySelector('.bubble');
@@ -301,6 +315,29 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
     b.addEventListener('click', () => send(s));
     startersEl.appendChild(b);
   });
+
+  // Restore saved chat on load — survives reloads until the user clears it.
+  function restoreConvo(){
+    let saved=[];
+    try{ saved=JSON.parse(localStorage.getItem(CHAT_KEY))||[]; }catch(e){ saved=[]; }
+    if(!Array.isArray(saved)||!saved.length){ updateHead(); return; }
+    feed.innerHTML='';
+    saved.forEach(m=>{
+      convo.push(m);
+      const el=document.createElement('div');
+      if(m.role==='user'){ el.className='msg user'; el.innerHTML=`<div class="bubble">${escapeHtml(m.content)}</div>`; }
+      else { el.className='msg coach'; el.innerHTML=`<div class="bubble"><span class="tagchip">Nova</span><div class="bubble-text">${mdToHtml(m.content)}</div></div>`; }
+      feed.appendChild(el);
+    });
+    updateHead(); scrollFeed();
+  }
+  document.getElementById('chatClear').addEventListener('click', ()=>{
+    convo.length=0;
+    try{ localStorage.removeItem(CHAT_KEY); }catch(e){}
+    feed.innerHTML=''; updateHead();
+    nova('neutral');
+  });
+  restoreConvo();
 </script>
 
 <!-- ===== Nova 3D avatar engine ===== -->
