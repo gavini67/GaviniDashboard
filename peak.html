@@ -510,77 +510,6 @@ let S = {
 let _schColor = '#6EE7B7';
 let _coachSummary = '';
 let _coachBusy = false;
-let _themeOpen = false;
-
-// ===== CREATOR THEME (Design Labs: graph style + chart backdrop + bg) =====
-// A pasted PEAK-THEME (Schedule Lab) or {lab:'graph'} (Graph Lab) code is stored
-// here and overrides the chart look until reset. Paste a PEAK-THEME or Graph
-// Lab code into the import box under the schedule.
-const PEAK_THEME = 'peak_theme_v1';
-function loadTheme(){ try{ const t=JSON.parse(localStorage.getItem(PEAK_THEME)||'null'); return (t&&(t.graph||t.bg||t.style))?t:null; }catch(e){ return null; } }
-function graphTheme(){ const t=loadTheme(); const g=(t&&t.graph)||{}; return { color:(typeof g.color==='string'&&g.color)?g.color:null, line:(g.line!=null?+g.line:null), glow:(g.glow!==false), backdrop:String(g.backdrop||'none').toLowerCase() }; }
-function toRGBA(hex,a){ let h=String(hex||'').replace('#',''); if(h.length===3)h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); if(!isFinite(n))return `rgba(110,231,183,${a})`; return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
-const MOUNTAIN_SVG='<svg viewBox="0 0 1000 300" preserveAspectRatio="none"><path d="M0,210 L90,160 L170,185 L260,120 L350,160 L470,100 L580,150 L700,110 L820,160 L920,120 L1000,150 L1000,300 L0,300 Z" fill="var(--c-soft)" opacity=".5"/><path d="M0,250 L110,215 L230,240 L350,200 L470,235 L600,205 L720,240 L850,210 L1000,245 L1000,300 L0,300 Z" fill="var(--c)" opacity=".22"/></svg>';
-let _chartBgCache={key:null,html:''};
-function chartBackdropHtml(){
-  const g=graphTheme(); const bd=g.backdrop; if(!bd||bd==='none') return '';
-  const c=g.color||'#6EE7B7'; const key=bd+'|'+c; if(_chartBgCache.key===key) return _chartBgCache.html;
-  const soft=toRGBA(c,.35), glow=toRGBA(c,.6); let inner='';
-  if(bd==='mountains') inner=MOUNTAIN_SVG;
-  else if(bd==='particles'){ for(let i=0;i<16;i++){ const dur=8+Math.random()*10; inner+='<span style="left:'+(Math.random()*100).toFixed(1)+'%;top:'+(55+Math.random()*45).toFixed(1)+'%;animation-duration:'+dur.toFixed(1)+'s;animation-delay:'+(-Math.random()*dur).toFixed(1)+'s;--dx:'+(Math.random()*40-20).toFixed(0)+'px;--dy:'+(-(60+Math.random()*80)).toFixed(0)+'px"></span>'; } }
-  else if(bd==='stars'){ inner='<span class="milky"></span>'; for(let i=0;i<64;i++){ const sz=(0.8+Math.random()*1.8).toFixed(2); inner+='<span class="star'+(Math.random()<0.3?' tint':'')+'" style="width:'+sz+'px;height:'+sz+'px;left:'+(Math.random()*100).toFixed(1)+'%;top:'+(Math.random()*100).toFixed(1)+'%;--tw:'+(2+Math.random()*4).toFixed(1)+'s;animation-delay:'+(-Math.random()*5).toFixed(1)+'s"></span>'; } for(let j=0;j<3;j++){ inner+='<span class="shoot" style="left:'+(-5+Math.random()*45).toFixed(1)+'%;top:'+(3+Math.random()*40).toFixed(1)+'%;--sd:'+(6+Math.random()*4).toFixed(1)+'s;--sdelay:'+(j*3+Math.random()*4).toFixed(1)+'s"></span>'; } }
-  const html='<div class="chartBg bgk-'+bd+'" style="--c:'+c+';--c-soft:'+soft+';--c-glow:'+glow+'">'+inner+'</div>';
-  _chartBgCache={key,html}; return html;
-}
-function applyThemeBg(){ const t=loadTheme(); const r=document.documentElement; if(t&&t.bg){ r.style.setProperty('--bg',t.bg); } else { r.style.removeProperty('--bg'); } }
-function normGraph(c){ return { color:c.color||null, line:(c.line!=null?+c.line:null), glow:(c.glow!==false), variant:c.variant||c.animate||'line', backdrop:c.backdrop||c.bg||'none' }; }
-// Accepts a Schedule Lab "PEAK-THEME:<base64>" code or a Graph/Text Lab JSON code.
-function importThemeCode(code){
-  try{
-    let raw=String(code||'').trim(); if(!raw) return false;
-    _chartBgCache={key:null,html:''};
-    if(/^PEAK-?THEME:/i.test(raw)){
-      const cfg=JSON.parse(decodeURIComponent(escape(atob(raw.replace(/^PEAK-?THEME:?/i,'').trim()))));
-      if(!cfg||(!cfg.style&&!cfg.bg&&!cfg.tasks&&!cfg.graph)) return false;
-      const t=loadTheme()||{v:1}; t.style=cfg.style||{}; t.bg=cfg.bg||null; if(cfg.graph)t.graph=normGraph(cfg.graph);
-      localStorage.setItem(PEAK_THEME, JSON.stringify(t));
-      if(Array.isArray(cfg.tasks)&&cfg.tasks.length && confirm('Also replace your schedule with the creator’s tasks?')){
-        const tasks=cfg.tasks.filter(t2=>t2&&t2.start!=null).map(t2=>{
-          const startMin=Math.round((+t2.start)*60);
-          const durH=(t2.durH!=null?+t2.durH:(t2.end!=null?(+t2.end-+t2.start):1));
-          return { id:uid(), label:t2.label||t2.name||'Task', startMin, dur:Math.max(15,Math.round((durH||1)*60)), color:t2.color||'#6EE7B7' };
-        });
-        if(tasks.length){ S.schedule=tasks; save(); }
-      }
-      applyThemeBg(); renderAll(); return true;
-    }
-    const m=raw.match(/\{[\s\S]*\}/);
-    if(m){ const cfg=JSON.parse(m[0]);
-      if(cfg&&cfg.lab==='graph'){ const t=loadTheme()||{v:1}; t.graph=normGraph(cfg); localStorage.setItem(PEAK_THEME, JSON.stringify(t)); applyThemeBg(); renderAll(); return true; }
-      if(cfg&&cfg.lab==='text'){ alert('That’s a Text Lab design (title animations) — it doesn’t style the energy graph.'); return false; }
-      if(cfg&&(cfg.style||cfg.bg)){ const t=loadTheme()||{v:1}; if(cfg.style)t.style=cfg.style; if(cfg.bg!=null)t.bg=cfg.bg; localStorage.setItem(PEAK_THEME, JSON.stringify(t)); applyThemeBg(); renderAll(); return true; }
-    }
-    return false;
-  }catch(e){ return false; }
-}
-function resetTheme(){ try{ localStorage.removeItem(PEAK_THEME); }catch(e){} _chartBgCache={key:null,html:''}; document.documentElement.style.removeProperty('--bg'); renderAll(); }
-// One-shot: Schedule Lab's "Send to Peak" drops the day's tasks here. Map them
-// into our schedule shape ({startMin, dur} from the lab's hours), then clear.
-function ingestLabTasks(){
-  try{
-    const raw=localStorage.getItem('peak_lab_tasks_v1'); if(!raw) return;
-    const obj=JSON.parse(raw);
-    if(obj&&obj.fromLab&&Array.isArray(obj.tasks)){
-      const tasks=obj.tasks.filter(t=>t&&t.start!=null).map(t=>{
-        const startMin=Math.round((+t.start)*60);
-        const durH=(t.durH!=null?+t.durH:(t.end!=null?(+t.end-+t.start):1));
-        return { id:uid(), label:t.label||t.name||'Task', startMin, dur:Math.max(15,Math.round((durH||1)*60)), color:t.color||'#6EE7B7' };
-      });
-      if(tasks.length){ S.schedule=tasks; save(); }
-    }
-    localStorage.removeItem('peak_lab_tasks_v1');
-  }catch(e){}
-}
 
 // ===== PERSISTENCE =====
 function load() {
@@ -676,11 +605,9 @@ function renderChart(pts, nm) {
   const mx=m=>PL+(m/1440)*IW;
   const my=e=>PT+(1-e/100)*IH;
   const nowScore=(pts.find(p=>p.m>=nm)||pts[pts.length-1]).e;
-  // Creator theme (Graph Lab) overrides the line look; else dynamic score color.
-  const gt=graphTheme();
-  const c=gt.color||scoreColor(nowScore);
-  const lw=gt.line||2;
-  const glow=gt.glow&&gt.color ? ` filter="drop-shadow(0 0 4px ${toRGBA(c,.7)})"` : '';
+  const c=scoreColor(nowScore);
+  const lw=2;
+  const glow='';
   const gid='eg'+Math.random().toString(36).slice(2,6);
   const path=pts.map((p,i)=>`${i?'L':'M'}${mx(p.m).toFixed(1)},${my(p.e).toFixed(1)}`).join('');
   const fill=`${path}L${mx(1440)},${PT+IH}L${mx(0)},${PT+IH}Z`;
@@ -777,7 +704,7 @@ function renderCurveCard(pts, nm) {
       <div class="spItem"><b>${sleepHrs.toFixed(1)}h</b> sleep</div>
       <div class="spNote"><button class="whyLink" data-action="edit-sleep">Edit</button></div>
     </div>
-    <div class="chartWrap" style="margin-bottom:4px">${chartBackdropHtml()}${renderChart(pts,nm)}</div>
+    <div class="chartWrap" style="margin-bottom:4px">${renderChart(pts,nm)}</div>
     <div class="xAxis">
       <span>12AM</span><span>3AM</span><span>6AM</span><span>9AM</span><span>12PM</span><span>3PM</span><span>6PM</span><span>9PM</span><span>12AM</span>
     </div>
@@ -906,14 +833,6 @@ function renderScheduleCard() {
         ${cPicker}
       </div>
       <div class="schHint">Duration in minutes</div>
-    </div>
-    <div class="schTheme">
-      <button class="schThemeToggle${_themeOpen?' active':''}${loadTheme()?' active':''}" data-action="theme-toggle">🎨 ${loadTheme()?'Creator theme active':'Import a creator theme'}</button>
-      ${_themeOpen?`<div class="schThemeRow">
-        <textarea class="schThemeIn" id="themeCode" placeholder="Paste a PEAK-THEME… or Graph Lab code"></textarea>
-        <button class="schThemeApply" data-action="theme-apply">Apply</button>
-      </div>
-      <div class="schThemeHint">Paste a PEAK-THEME or Graph Lab code to restyle the chart.${loadTheme()?' · <button class="schThemeReset" data-action="theme-reset">Reset to default</button>':''}</div>`:''}
     </div>
   </div>`;
 }
@@ -1155,14 +1074,6 @@ document.addEventListener('click', function(e) {
     const msg=document.getElementById('coachInput')?.value?.trim();
     if(!msg){ _coachSummary='Tell me about your day first.'; renderAll(); return; }
     callCoach(msg);
-  } else if(action==='theme-toggle') {
-    _themeOpen=!_themeOpen; renderAll();
-  } else if(action==='theme-apply') {
-    const code=document.getElementById('themeCode')?.value;
-    if(importThemeCode(code)) { _themeOpen=false; renderAll(); }
-    else { alert('Couldn’t read that theme code — paste the whole PEAK-THEME… string (or a Graph Lab code).'); }
-  } else if(action==='theme-reset') {
-    resetTheme();
   } else if(action==='close-modal') {
     closeModal();
   }
@@ -1192,8 +1103,6 @@ function tick() {
 
 // ===== INIT =====
 load();
-ingestLabTasks();
-applyThemeBg();
 initDust();
 renderAll();
 setInterval(tick, 30000);
