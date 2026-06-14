@@ -564,6 +564,23 @@ function importThemeCode(code){
   }catch(e){ return false; }
 }
 function resetTheme(){ try{ localStorage.removeItem(PEAK_THEME); }catch(e){} _chartBgCache={key:null,html:''}; document.documentElement.style.removeProperty('--bg'); renderAll(); }
+// One-shot: Schedule Lab's "Send to Peak" drops the day's tasks here. Map them
+// into our schedule shape ({startMin, dur} from the lab's hours), then clear.
+function ingestLabTasks(){
+  try{
+    const raw=localStorage.getItem('peak_lab_tasks_v1'); if(!raw) return;
+    const obj=JSON.parse(raw);
+    if(obj&&obj.fromLab&&Array.isArray(obj.tasks)){
+      const tasks=obj.tasks.filter(t=>t&&t.start!=null).map(t=>{
+        const startMin=Math.round((+t.start)*60);
+        const durH=(t.durH!=null?+t.durH:(t.end!=null?(+t.end-+t.start):1));
+        return { id:uid(), label:t.label||t.name||'Task', startMin, dur:Math.max(15,Math.round((durH||1)*60)), color:t.color||'#6EE7B7' };
+      });
+      if(tasks.length){ S.schedule=tasks; save(); }
+    }
+    localStorage.removeItem('peak_lab_tasks_v1');
+  }catch(e){}
+}
 
 // ===== PERSISTENCE =====
 function load() {
@@ -1175,6 +1192,7 @@ function tick() {
 
 // ===== INIT =====
 load();
+ingestLabTasks();
 applyThemeBg();
 initDust();
 renderAll();

@@ -253,10 +253,7 @@
       <a href="schedule-lab.html" class="on">Schedule</a>
     </div>
     <div class="sendGroup">
-      <button id="dlLab" class="labBtn" title="Download this Schedule Lab as a single file you can open on any computer">⬇ Download</button>
-      <button id="copyCfg" class="labBtn" title="Copy this style as JSON">Copy config</button>
-      <button id="copyTheme" class="labBtn primary" title="Copy a share code your Patreon subscribers paste into their own Peak (graph color + background + card style + tasks)">🎨 Copy theme code</button>
-      <button id="sendPeak" class="labBtn" title="Send this exact style to your own Peak tracker (same browser)">Send to Peak →</button>
+      <button id="sendPeak" class="labBtn primary" title="Apply this exact look + schedule to your Peak (same browser)">🎨 Send to Peak →</button>
     </div>
   </div>
 
@@ -1001,31 +998,17 @@ function fullCfg(){ return { v:2, style:styleCfg(), wake:WAKE, tasks:TASKS.map(f
   color:t.color||null, icon:t.icon||null, diff:t.diff||'med', locked:!!t.locked, gap:!!t.gap, size:t.size||null,
   rStart:(t.rStart==null?null:t.rStart), rEnd:(t.rEnd==null?null:t.rEnd), explicit:!!t.explicit, fill:!!t.fill }; }) }; }
 function labToast(msg){ var t=document.getElementById('labToast'); if(!t){ t=document.createElement('div'); t.id='labToast'; t.className='labToast'; document.body.appendChild(t); } t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(function(){ t.classList.remove('show'); },2600); }
+/* ---------- Send to Peak (one click — same browser) ----------
+ * Writes a complete creator theme to peak_theme_v1 (accent → graph color,
+ * background, card style) which Peak reads on load, plus the schedule to a
+ * one-shot key Peak maps in and clears. No copy/paste needed. */
 document.getElementById('sendPeak').addEventListener('click',function(){
   try{
     var cfg=fullCfg();
-    localStorage.setItem('peak_sched_style_v1', JSON.stringify(cfg.style));   // the visual style
-    var d=new Date(); var dk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-    // write the whole schedule into Peak's own store (label = name, carries color/icon/lock)
-    var ptasks=cfg.tasks.map(function(t){ return { id:t.id, label:t.name, diff:t.diff, start:t.start, end:t.end, durH:t.durH, color:t.color, icon:t.icon, locked:t.locked, gap:t.gap, size:t.size, rStart:t.rStart, rEnd:t.rEnd, explicit:t.explicit, fill:t.fill }; });
-    localStorage.setItem('peak_schedule_v1', JSON.stringify({ day:dk, tasks:ptasks, fromLab:true }));
-    labToast('✓ Sent your whole schedule + style to Peak — open Peak & refresh');
+    localStorage.setItem('peak_theme_v1', JSON.stringify({ v:1, style:cfg.style, bg:S.bg, graph:{ color:S.acc } }));
+    localStorage.setItem('peak_lab_tasks_v1', JSON.stringify({ fromLab:true, ts:Date.now(), tasks:cfg.tasks }));
+    labToast('✓ Sent to Peak — open Peak (refresh if already open)');
   }catch(e){ labToast('Could not save — storage blocked'); }
-});
-document.getElementById('copyCfg').addEventListener('click',function(){ var json=JSON.stringify(fullCfg()); function done(){ labToast('✓ Full schedule + style copied (JSON)'); } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(json).then(done,function(){ window.prompt('Copy the full schedule + style:', json); }); } else { window.prompt('Copy the full schedule + style:', json); } });
-/* ---------- Copy theme code ----------
- * A compact, shareable PEAK-THEME code: graph/accent color + background +
- * card style + the schedule tasks. Post it on Patreon; a subscriber pastes it
- * into "Import a creator theme" in their own Peak and gets your exact look. */
-function themeCode(){ var theme={ v:1, style:styleCfg(), bg:S.bg, tasks:fullCfg().tasks }; return 'PEAK-THEME:'+btoa(unescape(encodeURIComponent(JSON.stringify(theme)))); }
-document.getElementById('copyTheme').addEventListener('click',function(){ var code=themeCode(); function done(){ labToast('✓ Theme code copied — share it on Patreon; subscribers paste it into Peak'); } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(code).then(done,function(){ window.prompt('Copy your theme code (share on Patreon):', code); }); } else { window.prompt('Copy your theme code (share on Patreon):', code); } });
-/* ---------- Download this Lab as a single standalone file ----------
- * Schedule Lab is one self-contained HTML file (all CSS + JS inline). This
- * saves a copy you can keep and double-click on any computer — no install. */
-document.getElementById('dlLab').addEventListener('click',function(){
-  function save(text){ var blob=new Blob([text],{type:'text/html'}); var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download='schedule-lab.html'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(url); },1500); labToast('✓ Downloaded schedule-lab.html — double-click it to open'); }
-  // grab the pristine page source; fall back to the live DOM if fetch is blocked (e.g. file://)
-  fetch(location.href,{cache:'no-store'}).then(function(r){ return r.text(); }).then(save).catch(function(){ save('<!DOCTYPE html>\n'+document.documentElement.outerHTML); });
 });
 
 drawUIKit();
