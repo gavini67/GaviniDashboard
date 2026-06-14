@@ -490,5 +490,11 @@ window.Nova = buildNova(document.getElementById('scene'))
   obs.observe(document.body,{childList:true,subtree:true});
 })();
 </script>
+
+<!-- ===== Supabase sync — pulls the whole-device dashboard snapshot into
+     localStorage so Nova can see data from every page and every device.
+     Same tags + version as the other pages. ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="db.js?v=15"></script>
 </body>
 </html>
