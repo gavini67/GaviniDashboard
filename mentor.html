@@ -482,10 +482,12 @@ window.Nova = buildNova(document.getElementById('scene'))
 <!-- ===== brand.js — inline ===== -->
 <script>
 (function(){
-  function name(){ try{const p=JSON.parse(localStorage.getItem('patron_profile_v1'));return p&&p.name?p.name:null;}catch(e){return null;} }
-  function swap(){ const n=name(); if(!n) return; document.querySelectorAll('.wordmark').forEach(el=>{el.textContent=n;}); }
+  function getName(){ try{const p=JSON.parse(localStorage.getItem('patron_profile_v1'));return p&&p.name?p.name:null;}catch(e){return null;} }
+  function swap(){ const n=getName(); if(!n) return; document.querySelectorAll('.wordmark').forEach(el=>{ if(el.textContent!==n) el.textContent=n; }); }
   swap();
-  new MutationObserver(swap).observe(document.body,{childList:true,subtree:true});
+  // Disconnect while we mutate so writing .wordmark can't re-trigger us (infinite loop).
+  const obs=new MutationObserver(()=>{ obs.disconnect(); swap(); obs.observe(document.body,{childList:true,subtree:true}); });
+  obs.observe(document.body,{childList:true,subtree:true});
 })();
 </script>
 </body>
