@@ -179,6 +179,8 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
   // `messages` is the conversation so far. Returns {ok, text}.
   async function askNova(messages) {
     const data = readDashboardData();
+    const now = new Date();
+    const nowStr = now.toLocaleString(undefined, { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'numeric', minute:'2-digit' });
     try {
       const res = await fetch('/api/mentor', {
         method: 'POST',
@@ -205,6 +207,10 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
             "(one or two max). Keep the whole reply under ~120 words.\n" +
             "- For a quick follow-up, a sentence or two is fine — skip the " +
             "headings when the answer is small.\n\n" +
+            "RIGHT NOW it is " + nowStr + ". Use this to reason about the " +
+            "schedule — what has already passed, what's happening now, and " +
+            "what's still ahead. Don't describe a block as upcoming if its " +
+            "start time is already behind the current time.\n\n" +
             "Current dashboard data as JSON:\n" + JSON.stringify(data),
           messages,
         }),
