@@ -448,7 +448,6 @@ const PROFILE_KEY = 'patron_profile_v1';
 const CAF_HALF_MS = 5 * 3600000;
 const CAF_ONSET_MS = 30 * 60000;
 const CAF_MAX = 400;
-const COACH_KEY = 'peak_anthropic_key';
 const COACH_MODEL = 'claude-haiku-4-5-20251001';
 const COACH_COLORS = ['#6EE7B7','#60A5FA','#F472B6','#FBBF24','#A78BFA','#F87171'];
 
@@ -845,7 +844,6 @@ function renderCoachCard() {
       <textarea class="schThemeIn" id="coachInput" style="min-height:64px" placeholder="e.g. Golf at 2pm with dad. Need 2h deep work on the finance app, a gym session, and to clear my inbox."${_coachBusy?' disabled':''}></textarea>
       <div class="schInputRow" style="margin-top:10px">
         <button class="schAdd" data-action="coach-plan" style="flex:1"${_coachBusy?' disabled':''}>${_coachBusy?'Planning…':'Plan my day ✦'}</button>
-        <button class="schThemeReset" data-action="coach-key" style="flex:none;align-self:center;white-space:nowrap">API key</button>
       </div>
       ${_coachSummary?`<div class="cafTip" style="margin-top:14px"><span class="cafTipIcon">✦</span><div class="cafTipTxt">${_coachSummary}</div></div>`:''}
       <div class="schHint">Replaces your current schedule with a fresh energy-matched plan.</div>
@@ -896,18 +894,13 @@ function applyCoachPlan(plan) {
 }
 
 async function callCoach(userMsg) {
-  const key=localStorage.getItem(COACH_KEY);
-  if(!key){ coachKeyModal(); return; }
   _coachBusy=true; _coachSummary=''; renderAll();
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    // Routes through the serverless proxy — key lives in the server's
+    // ANTHROPIC_API_KEY env var (Vercel), never in the browser.
+    const res=await fetch('/api/mentor',{
       method:'POST',
-      headers:{
-        'content-type':'application/json',
-        'x-api-key':key,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true',
-      },
+      headers:{ 'content-type':'application/json' },
       body:JSON.stringify({
         model:COACH_MODEL,
         max_tokens:4096,
@@ -927,17 +920,6 @@ async function callCoach(userMsg) {
   } finally {
     _coachBusy=false; renderAll();
   }
-}
-
-function coachKeyModal() {
-  const cur=localStorage.getItem(COACH_KEY)||'';
-  openModal(`<div class="modal">
-    <div class="modalHead"><h2 class="modalTitle">Coach API key</h2><button class="modalClose" data-action="close-modal">×</button></div>
-    <p class="fNote">The AI coach calls Anthropic's API directly from your browser. Paste your key (<b>sk-ant-…</b>) — it's stored only in this browser's localStorage and sent only to Anthropic.</p>
-    <div class="f fFull"><label class="fLab">Anthropic API key</label><input class="fIn" id="mCoachKey" type="password" placeholder="sk-ant-..." value="${cur}"/></div>
-    ${cur?'<button class="schThemeReset" data-action="coach-clear-key" style="margin-top:12px">Remove saved key</button>':''}
-    <button class="primary" data-action="coach-key-save">Save key</button>
-  </div>`);
 }
 
 // ===== MAIN RENDER =====
@@ -1090,15 +1072,6 @@ document.addEventListener('click', function(e) {
     const msg=document.getElementById('coachInput')?.value?.trim();
     if(!msg){ _coachSummary='Tell me about your day first.'; renderAll(); return; }
     callCoach(msg);
-  } else if(action==='coach-key') {
-    coachKeyModal();
-  } else if(action==='coach-key-save') {
-    const k=document.getElementById('mCoachKey')?.value?.trim();
-    if(k) localStorage.setItem(COACH_KEY,k);
-    closeModal();
-  } else if(action==='coach-clear-key') {
-    localStorage.removeItem(COACH_KEY);
-    closeModal();
   } else if(action==='close-modal') {
     closeModal();
   }
