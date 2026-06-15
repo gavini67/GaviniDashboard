@@ -226,6 +226,18 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
 /* Sleep debt + coach */
 .debtCard, .coachCard { padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--card-shadow); transition: border-color var(--duration) var(--ease); }
 .debtCard:hover, .coachCard:hover { border-color: var(--border-strong); }
+.verdictCard { padding: var(--space-5); border:1px solid var(--border); border-left:2px solid var(--muted); border-radius:0 var(--radius-lg) var(--radius-lg) 0; background: var(--surface); box-shadow: var(--card-shadow); }
+.verdictCard[data-tone="good"]{ border-left-color: var(--pos); }
+.verdictCard[data-tone="watch"]{ border-left-color: var(--warn); }
+.verdictCard[data-tone="low"]{ border-left-color: var(--neg); }
+.verdictHead { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.verdictEye { font-family: var(--font-mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color: var(--muted); }
+.verdictBadge { font-family: var(--font-mono); font-size:9.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; padding:3px 9px; border-radius: var(--radius-pill); border:1px solid; }
+.verdictBadge[data-tone="good"]{ color: var(--pos); border-color: var(--pos-line); background: var(--pos-soft); }
+.verdictBadge[data-tone="watch"]{ color: var(--warn); border-color: var(--warn-line); background: var(--warn-soft); }
+.verdictBadge[data-tone="low"]{ color: var(--neg); border-color: var(--neg-line); background: var(--neg-soft); }
+.verdictHeadline { font-size: var(--text-base); font-weight:600; color: var(--fg); line-height:1.45; margin-bottom:10px; }
+.verdictReasons { font-size: 12.5px; color: var(--muted-strong); line-height:1.7; font-family: var(--font-ui); }
 .cardHead { display:flex; align-items:baseline; justify-content:space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
 .debtTotal { font-family: var(--font-display); font-weight: 600; font-size: var(--text-lg); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .debtTotal em { font-family: var(--font-mono); font-style: normal; font-size: var(--text-xs); letter-spacing: 0.06em; color: var(--muted); margin-left: 6px; }
@@ -493,6 +505,24 @@ function statGridHtml(d) {
         rhrDelta != null ? (rhrDelta <= 0 ? '↓ ' + rhrDelta + ' bpm' : '↑ +' + rhrDelta + ' bpm') : null,
         rhrDelta != null && rhrDelta <= 0 ? 'good' : 'watch')
     + '</div>';
+}
+
+/* ---- Today's call (verdict) — ported from the health page ---- */
+function verdictHtml(d) {
+  const rec = d.recovery;
+  if (rec == null) return '';
+  let cls = 'good', badge = 'GREEN', headline = "Push hard today. Body's primed — go for the PR, the harder workout, the heavy task.";
+  if (rec < 67 && rec >= 34) { cls = 'watch'; badge = 'YELLOW'; headline = "Moderate day. Train, but don't max out — stick to planned volume, skip the max-effort sets."; }
+  else if (rec < 34) { cls = 'low'; badge = 'RED'; headline = 'Recover. Body is asking for rest — light movement, walk, mobility, sleep early.'; }
+  const reasons = [];
+  if (d.sleepPerf != null) reasons.push((d.sleepPerf >= 80 ? '✓' : '·') + ' Sleep ' + Math.round(d.sleepPerf) + '% — ' + (d.sleepPerf >= 80 ? 'you slept well.' : 'sub-par sleep.'));
+  if (d.strain != null)    reasons.push((d.strain < 14 ? '·' : '✓') + ' Strain ' + d.strain.toFixed(1) + ' — ' + (d.strain < 14 ? 'room to push if recovery allows.' : 'high load logged.'));
+  if (d.hrv != null)       reasons.push((d.hrv >= 50 ? '✓' : '·') + ' HRV ' + Math.round(d.hrv) + 'ms — ' + (d.hrv >= 50 ? 'strong autonomic state.' : 'autonomic stress.'));
+  if (d.rhr != null)       reasons.push((d.rhr <= 60 ? '✓' : '·') + ' RHR ' + Math.round(d.rhr) + 'bpm — ' + (d.rhr <= 60 ? 'well-conditioned.' : 'elevated.'));
+  return '<div class="verdictCard" data-tone="' + cls + '">'
+    + '<div class="verdictHead"><span class="verdictEye">Today\'s call</span><span class="verdictBadge" data-tone="' + cls + '">' + badge + '</span></div>'
+    + '<div class="verdictHeadline">' + headline + '</div>'
+    + '<div class="verdictReasons">' + reasons.join('<br>') + '</div></div>';
 }
 
 /* ---- Sleep debt ---- */
@@ -767,6 +797,7 @@ function dataPanelHtml(d, kind) {
   return '<section class="panel">'
     + recoveryHeroHtml(d)
     + statGridHtml(d)
+    + verdictHtml(d)
     + sleepDebtHtml(d)
     + coachHtml(d)
     + '<div class="footer"><div class="legend">'
