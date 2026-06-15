@@ -627,6 +627,31 @@ function renderChart(pts, nm) {
   </svg>`;
 }
 
+// ===== SCHEDULE OVERLAY (tasks + sleep drawn on the energy curve) =====
+function hexA(hex,a){ let h=String(hex||'').replace('#',''); if(h.length===3)h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); if(!isFinite(n)) return `rgba(110,231,183,${a})`; return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
+// x% across the chart for a given minute, matching renderChart's 8px side padding.
+function chartX(m){ const W=900,PL=8,PR=8; return (PL+(m/1440)*(W-PL-PR))/W*100; }
+function renderSchedOverlay(nm) {
+  const sorted=[...S.schedule].sort((a,b)=>a.startMin-b.startMin);
+  let bands='', pills='';
+  // sleep shading (wraps midnight): bed -> wake
+  const {bedMin,wakeMin}=S.sleep;
+  const sleepSegs = bedMin<=wakeMin ? [[bedMin,wakeMin]] : [[0,wakeMin],[bedMin,1440]];
+  sleepSegs.forEach(([a,b])=>{
+    if(b<=a) return;
+    bands+=`<div class="schBand" style="left:${chartX(a).toFixed(2)}%;width:${(chartX(b)-chartX(a)).toFixed(2)}%;top:0;bottom:0;background:rgba(120,140,170,.07)"></div>`;
+  });
+  if(wakeMin>60) bands+=`<div class="sleepLbl" style="left:${chartX(Math.max(60,wakeMin/2)).toFixed(2)}%">☾ Sleep</div>`;
+  // task bands + labels
+  sorted.forEach((s,i)=>{
+    const a=s.startMin, b=Math.min(1440,s.startMin+s.dur);
+    const x1=chartX(a), x2=chartX(b), w=Math.max(0.4,x2-x1), c=s.color||'#6EE7B7', cx=(x1+x2)/2;
+    bands+=`<div class="schBand bd" style="left:${x1.toFixed(2)}%;width:${w.toFixed(2)}%;top:0;bottom:0;background:${hexA(c,.13)};--bc:${hexA(c,.45)}"></div>`;
+    pills+=`<div class="schPill glass ${i%2?'bottom':'top'}" style="left:${cx.toFixed(2)}%;--pc:${c}"><span class="pillNo" style="background:${c};color:#04130c">${i+1}</span><span class="pillNm">${s.label}</span><span class="pillTm">${fmtTime(s.startMin)}</span></div>`;
+  });
+  return `<div class="schBands">${bands}${pills}</div>`;
+}
+
 // ===== DUST =====
 function initDust() {
   const el=document.getElementById('dust');
@@ -704,7 +729,7 @@ function renderCurveCard(pts, nm) {
       <div class="spItem"><b>${sleepHrs.toFixed(1)}h</b> sleep</div>
       <div class="spNote"><button class="whyLink" data-action="edit-sleep">Edit</button></div>
     </div>
-    <div class="chartWrap" style="margin-bottom:4px">${renderChart(pts,nm)}</div>
+    <div class="chartWrap" style="margin-bottom:4px">${renderChart(pts,nm)}${renderSchedOverlay(nm)}</div>
     <div class="xAxis">
       <span>12AM</span><span>3AM</span><span>6AM</span><span>9AM</span><span>12PM</span><span>3PM</span><span>6PM</span><span>9PM</span><span>12AM</span>
     </div>
