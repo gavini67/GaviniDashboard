@@ -243,6 +243,11 @@ body{ background:var(--bg); color:var(--fg); font-family:var(--ui); -webkit-font
 .spNote{ font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-left:auto; }
 .xAxis{ display:flex; justify-content:space-between; margin-top:8px; padding:0 2px; }
 .xAxis span{ font-family:var(--mono); font-size:10px; letter-spacing:.08em; color:var(--muted); }
+.schLegend{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.schLeg{ display:inline-flex; align-items:center; gap:7px; padding:6px 11px 6px 6px; border:1px solid var(--line); border-radius:var(--pill); background:rgba(255,255,255,.02); font-size:12.5px; color:var(--muted2); }
+.schLeg b{ color:var(--fg); font-weight:600; }
+.schLegNo{ display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; font-family:var(--mono); font-size:10px; font-weight:700; color:#04130c; flex:none; }
+.schLegTm{ font-family:var(--mono); font-size:10px; color:var(--muted); letter-spacing:.04em; }
 .plan{ margin-top:26px; }
 .planLabel{ font-family:var(--mono); font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted2); margin:0 0 12px; }
 .planEmpty{ border:1px dashed var(--line2); border-radius:var(--radius-sm); padding:18px; text-align:center; font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
@@ -642,14 +647,24 @@ function renderSchedOverlay(nm) {
     bands+=`<div class="schBand" style="left:${chartX(a).toFixed(2)}%;width:${(chartX(b)-chartX(a)).toFixed(2)}%;top:0;bottom:0;background:rgba(120,140,170,.07)"></div>`;
   });
   if(wakeMin>60) bands+=`<div class="sleepLbl" style="left:${chartX(Math.max(60,wakeMin/2)).toFixed(2)}%">☾ Sleep</div>`;
-  // task bands + labels
+  // task bands + small numbered markers (labels live in the legend, so they never overlap)
   sorted.forEach((s,i)=>{
     const a=s.startMin, b=Math.min(1440,s.startMin+s.dur);
     const x1=chartX(a), x2=chartX(b), w=Math.max(0.4,x2-x1), c=s.color||'#6EE7B7', cx=(x1+x2)/2;
     bands+=`<div class="schBand bd" style="left:${x1.toFixed(2)}%;width:${w.toFixed(2)}%;top:0;bottom:0;background:${hexA(c,.13)};--bc:${hexA(c,.45)}"></div>`;
-    pills+=`<div class="schPill glass ${i%2?'bottom':'top'}" style="left:${cx.toFixed(2)}%;--pc:${c}"><span class="pillNo" style="background:${c};color:#04130c">${i+1}</span><span class="pillNm">${s.label}</span><span class="pillTm">${fmtTime(s.startMin)}</span></div>`;
+    pills+=`<div class="schPill minimal top" style="left:${cx.toFixed(2)}%;--pc:${c}"><span class="pillNo" style="background:${c};color:#04130c">${i+1}</span></div>`;
   });
   return `<div class="schBands">${bands}${pills}</div>`;
+}
+// Legend under the chart: number -> task, colored. Wraps; never overlaps.
+function renderSchedLegend() {
+  const sorted=[...S.schedule].sort((a,b)=>a.startMin-b.startMin);
+  if(!sorted.length) return '';
+  const items=sorted.map((s,i)=>{
+    const c=s.color||'#6EE7B7';
+    return `<span class="schLeg"><span class="schLegNo" style="background:${c}">${i+1}</span><b>${s.label}</b><span class="schLegTm">${fmtTime(s.startMin)}</span></span>`;
+  }).join('');
+  return `<div class="schLegend">${items}</div>`;
 }
 
 // ===== DUST =====
@@ -733,6 +748,7 @@ function renderCurveCard(pts, nm) {
     <div class="xAxis">
       <span>12AM</span><span>3AM</span><span>6AM</span><span>9AM</span><span>12PM</span><span>3PM</span><span>6PM</span><span>9PM</span><span>12AM</span>
     </div>
+    ${renderSchedLegend()}
   </div>`;
 }
 
