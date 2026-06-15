@@ -636,35 +636,83 @@ function renderChart(pts, nm) {
 function hexA(hex,a){ let h=String(hex||'').replace('#',''); if(h.length===3)h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); if(!isFinite(n)) return `rgba(110,231,183,${a})`; return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`; }
 // x% across the chart for a given minute, matching renderChart's 8px side padding.
 function chartX(m){ const W=900,PL=8,PR=8; return (PL+(m/1440)*(W-PL-PR))/W*100; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function fmtClock12(min){ const m=((min%1440)+1440)%1440, h=Math.floor(m/60), mn=m%60, ap=h>=12?'pm':'am', h12=h%12||12; return mn?`${h12}:${String(mn).padStart(2,'0')}${ap}`:`${h12}${ap}`; }
+function fmtRangeShort(a,b){ let A=fmtClock12(a),B=fmtClock12(b); if(A.slice(-2)===B.slice(-2))A=A.slice(0,-2); return A+'–'+B; }
+// Snap a desired start (minutes) into the nearest free 15-min slot between wake
+// and bed that doesn't collide with other tasks.
+function snapFreeMin(desired,dur,others){
+  const wake=S.sleep.wakeMin, bed=S.sleep.bedMin, snap=v=>Math.round(v/15)*15;
+  if(bed<=wake) return clamp(snap(desired),0,1440-dur);
+  let t=wake, gaps=[];
+  others.slice().sort((a,b)=>a.startMin-b.startMin).forEach(o=>{ const os=o.startMin, oe=o.startMin+o.dur; if(oe<=wake||os>=bed) return; if(os>t) gaps.push([t,Math.min(os,bed)]); t=Math.max(t,oe); });
+  if(t<bed) gaps.push([t,bed]);
+  const fit=gaps.filter(g=>g[1]-g[0]>=dur-1);
+  if(!fit.length) return clamp(snap(desired),wake,Math.max(wake,bed-dur));
+  let best=fit[0][0],bd=1e9;
+  fit.forEach(g=>{ const s=clamp(desired,g[0],g[1]-dur); const d=Math.abs(s-desired); if(d<bd){bd=d;best=s;} });
+  return snap(best);
+}
+
 function renderSchedOverlay(nm) {
   const sorted=[...S.schedule].sort((a,b)=>a.startMin-b.startMin);
-  let bands='', pills='';
+  let h='';
   // sleep shading (wraps midnight): bed -> wake
   const {bedMin,wakeMin}=S.sleep;
   const sleepSegs = bedMin<=wakeMin ? [[bedMin,wakeMin]] : [[0,wakeMin],[bedMin,1440]];
-  sleepSegs.forEach(([a,b])=>{
-    if(b<=a) return;
-    bands+=`<div class="schBand" style="left:${chartX(a).toFixed(2)}%;width:${(chartX(b)-chartX(a)).toFixed(2)}%;top:0;bottom:0;background:rgba(120,140,170,.07)"></div>`;
-  });
-  if(wakeMin>60) bands+=`<div class="sleepLbl" style="left:${chartX(Math.max(60,wakeMin/2)).toFixed(2)}%">☾ Sleep</div>`;
-  // task bands + small numbered markers (labels live in the legend, so they never overlap)
+  sleepSegs.forEach(([a,b])=>{ if(b>a) h+=`<div class="schBand" style="left:${chartX(a).toFixed(2)}%;width:${(chartX(b)-chartX(a)).toFixed(2)}%;top:0;bottom:0;background:rgba(120,140,170,.07)"></div>`; });
+  if(wakeMin>60) h+=`<div class="sleepLbl" style="left:${chartX(Math.max(60,wakeMin/2)).toFixed(2)}%">☾ Sleep</div>`;
+  // task bands + draggable text pills + lock toggles (positioned/lane-stacked by layoutSchedOverlay)
   sorted.forEach((s,i)=>{
     const a=s.startMin, b=Math.min(1440,s.startMin+s.dur);
-    const x1=chartX(a), x2=chartX(b), w=Math.max(0.4,x2-x1), c=s.color||'#6EE7B7', cx=(x1+x2)/2;
-    bands+=`<div class="schBand bd" style="left:${x1.toFixed(2)}%;width:${w.toFixed(2)}%;top:0;bottom:0;background:${hexA(c,.13)};--bc:${hexA(c,.45)}"></div>`;
-    pills+=`<div class="schPill minimal top" style="left:${cx.toFixed(2)}%;--pc:${c}"><span class="pillNo" style="background:${c};color:#04130c">${i+1}</span></div>`;
+    const x1=chartX(a), x2=chartX(b), w=Math.max(0.4,x2-x1), c=s.color||'#6EE7B7', cx=(x1+x2)/2, locked=!!s.locked;
+    h+=`<div class="schBand bd" style="left:${x1.toFixed(2)}%;width:${w.toFixed(2)}%;top:0;bottom:0;background:${hexA(c,.13)};--bc:${hexA(c,.45)}"></div>`;
+    h+=`<div class="schPill glass ${locked?'locked':'movable'}" data-taskid="${s.id}" style="left:${cx.toFixed(2)}%;top:12px;--pc:${c}">`+
+       `<span class="pillNo" style="background:${c};color:#04130c">${i+1}</span>`+
+       (s.icon?`<span class="pillIc">${s.icon}</span>`:'')+
+       `<span class="pillNm">${s.label}</span>`+
+       `<span class="pillTm">${fmtRangeShort(a,b)}</span></div>`;
+    h+=`<button class="schLock ${locked?'on':''}" data-lock="${s.id}" style="left:${cx.toFixed(2)}%;bottom:6px">${locked?'🔒':'🔓'}</button>`;
   });
-  return `<div class="schBands">${bands}${pills}</div>`;
+  return `<div class="schBands" id="schOverlay">${h}</div>`;
 }
-// Legend under the chart: number -> task, colored. Wraps; never overlaps.
-function renderSchedLegend() {
-  const sorted=[...S.schedule].sort((a,b)=>a.startMin-b.startMin);
-  if(!sorted.length) return '';
-  const items=sorted.map((s,i)=>{
-    const c=s.color||'#6EE7B7';
-    return `<span class="schLeg"><span class="schLegNo" style="background:${c}">${i+1}</span><b>${s.label}</b><span class="schLegTm">${fmtTime(s.startMin)}</span></span>`;
-  }).join('');
-  return `<div class="schLegend">${items}</div>`;
+
+// Anti-overlap: measure every pill and stack horizontally-colliding ones into
+// separate vertical lanes — text never overlaps.
+function layoutSchedOverlay(){
+  const ov=document.getElementById('schOverlay'); if(!ov) return;
+  const W=ov.clientWidth; if(!W) return;
+  const refs=[...ov.querySelectorAll('.schPill')].map(p=>{ const w=p.offsetWidth,ht=p.offsetHeight; let cx=clamp(W*parseFloat(p.style.left)/100, w/2+4, W-w/2-4); return {el:p,h:ht,cx,l:cx-w/2,rgt:cx+w/2}; });
+  refs.sort((a,b)=>a.cx-b.cx);
+  const lanes=[], G=10, rowH=((refs[0]&&refs[0].h)||30)+8;
+  refs.forEach(r=>{
+    let lane=0;
+    while(lane<24){ const occ=lanes[lane]||(lanes[lane]=[]); const hit=occ.some(s=>!(r.rgt<s[0]-G||r.l>s[1]+G)); if(!hit){ occ.push([r.l,r.rgt]); break; } lane++; }
+    r.el.style.left=r.cx+'px'; r.el.style.top=(12+lane*rowH)+'px'; r.el.style.transform='translateX(-50%)';
+  });
+}
+
+// Drag a movable pill to reschedule (snaps to a free 15-min slot); lock toggles.
+function bindSchedDrag(){
+  const ov=document.getElementById('schOverlay'); if(!ov) return;
+  ov.querySelectorAll('.schLock[data-lock]').forEach(btn=>{
+    btn.addEventListener('click',e=>{ e.stopPropagation(); const t=S.schedule.find(x=>x.id===btn.dataset.lock); if(t){ t.locked=!t.locked; save(); renderAll(); } });
+  });
+  ov.querySelectorAll('.schPill[data-taskid]').forEach(el=>{
+    const id=el.dataset.taskid, t=S.schedule.find(x=>x.id===id);
+    if(!t||t.locked){ el.style.cursor='default'; return; }
+    el.style.cursor='grab';
+    el.addEventListener('pointerdown',e=>{
+      e.preventDefault();
+      const dur=t.dur, others=S.schedule.filter(x=>x.id!==id);
+      const r=ov.getBoundingClientRect(); el.classList.add('dragging');
+      let ns=t.startMin; const tm=el.querySelector('.pillTm');
+      const pxToMin=px=>{ const W=900,PL=8,PR=8, fx=clamp((px-r.left)/r.width,0,1); return ((fx*W-PL)/(W-PL-PR))*1440; };
+      function move(ev){ ns=snapFreeMin(pxToMin(ev.clientX)-dur/2, dur, others); el.style.left=(r.width*chartX(ns+dur/2)/100)+'px'; if(tm) tm.textContent=fmtRangeShort(ns,Math.min(1440,ns+dur)); }
+      function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); el.classList.remove('dragging'); t.startMin=Math.round(ns); save(); renderAll(); }
+      document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
+    });
+  });
 }
 
 // ===== DUST =====
@@ -748,7 +796,6 @@ function renderCurveCard(pts, nm) {
     <div class="xAxis">
       <span>12AM</span><span>3AM</span><span>6AM</span><span>9AM</span><span>12PM</span><span>3PM</span><span>6PM</span><span>9PM</span><span>12AM</span>
     </div>
-    ${renderSchedLegend()}
   </div>`;
 }
 
@@ -1005,7 +1052,11 @@ function renderAll() {
     <p class="footNote">Energy model: circadian rhythm × caffeine pharmacokinetics × feel check-in. Not medical advice.</p>`;
   const cs=document.getElementById('cafSearch');
   if(cs) cs.addEventListener('input',e=>cafSearch(e.target.value));
+  layoutSchedOverlay();
+  bindSchedDrag();
 }
+let _schResizeWired=false;
+function wireSchedResize(){ if(_schResizeWired) return; _schResizeWired=true; addEventListener('resize',()=>layoutSchedOverlay()); }
 
 // ===== CAFFEINE SEARCH =====
 function cafSearch(q) {
@@ -1146,6 +1197,7 @@ function tick() {
 load();
 initDust();
 renderAll();
+wireSchedResize();
 setInterval(tick, 30000);
 setInterval(renderAll, 300000);
 </script>
