@@ -238,6 +238,25 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
 .verdictBadge[data-tone="low"]{ color: var(--neg); border-color: var(--neg-line); background: var(--neg-soft); }
 .verdictHeadline { font-size: var(--text-base); font-weight:600; color: var(--fg); line-height:1.45; margin-bottom:10px; }
 .verdictReasons { font-size: 12.5px; color: var(--muted-strong); line-height:1.7; font-family: var(--font-ui); }
+.stagesCard { padding: var(--space-5); border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface); box-shadow:var(--card-shadow); }
+.stagesTotal { font-family: var(--font-mono); font-size:11px; color: var(--muted); margin-left:auto; }
+.stagesBar { display:flex; height:10px; border-radius:var(--radius-pill); overflow:hidden; background:var(--track); margin:12px 0; }
+.stageSeg { height:100%; }
+.stagesLegend { display:flex; flex-wrap:wrap; gap:14px; }
+.stageLeg { display:inline-flex; align-items:center; gap:7px; font-family: var(--font-mono); font-size:11px; color: var(--muted); }
+.stageLeg b { color: var(--fg); font-weight:600; }
+.stageDot { width:8px; height:8px; border-radius:2px; }
+.bioGrid { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-3); }
+@media (max-width:520px){ .bioGrid { grid-template-columns:1fr; } }
+.bioTile { position:relative; padding:var(--space-4); border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); }
+.bioZone { position:absolute; top:12px; right:12px; width:8px; height:8px; border-radius:50%; }
+.bioZone[data-z="good"]{ background:var(--pos); box-shadow:0 0 8px var(--pos); }
+.bioZone[data-z="watch"]{ background:var(--warn); }
+.bioZone[data-z="low"]{ background:var(--neg); }
+.bioZone[data-z="norm"]{ background:var(--muted); }
+.bioLabel { font-family: var(--font-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color: var(--muted); }
+.bioVal { font-family: var(--font-display); font-weight:600; font-size: var(--text-xl); letter-spacing:-0.02em; margin-top:4px; font-variant-numeric:tabular-nums; }
+.bioUnit { font-family: var(--font-mono); font-size:11px; color: var(--muted); font-weight:400; }
 .cardHead { display:flex; align-items:baseline; justify-content:space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
 .debtTotal { font-family: var(--font-display); font-weight: 600; font-size: var(--text-lg); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .debtTotal em { font-family: var(--font-mono); font-style: normal; font-size: var(--text-xs); letter-spacing: 0.06em; color: var(--muted); margin-left: 6px; }
@@ -507,6 +526,39 @@ function statGridHtml(d) {
     + '</div>';
 }
 
+/* ---- Sleep stages bar (REM / Deep / Light / Awake) ---- */
+function sleepStagesHtml(d) {
+  const s = d.stages; if (!s) return '';
+  const segs = [['REM', s.rem, '#67E8F9'], ['Deep', s.deep, '#6EE7B7'], ['Light', s.light, 'rgba(255,255,255,.35)'], ['Awake', s.awake, '#FBBF24']].filter(x => x[1] != null && x[1] > 0);
+  if (!segs.length) return '';
+  const total = segs.reduce((a, x) => a + x[1], 0) || 1;
+  const bar = segs.map(x => '<div class="stageSeg" style="width:' + (x[1] / total * 100).toFixed(1) + '%;background:' + x[2] + '"></div>').join('');
+  const leg = segs.map(x => '<span class="stageLeg"><span class="stageDot" style="background:' + x[2] + '"></span>' + x[0] + ' <b>' + formatHM(x[1] / 60) + '</b></span>').join('');
+  return '<div class="stagesCard"><div class="cardHead"><span class="serifTitle">Sleep stages</span><span class="stagesTotal">' + formatHM(total / 60) + ' total</span></div>'
+    + '<div class="stagesBar">' + bar + '</div><div class="stagesLegend">' + leg + '</div></div>';
+}
+
+/* ---- Bio tiles (skin temp / blood O2 / resp rate) with status dots ---- */
+function bioZone(kind, v) {
+  if (v == null) return null;
+  if (kind === 'spo2') return v >= 95 ? 'good' : v >= 92 ? 'watch' : 'low';
+  if (kind === 'skin') return (v >= 33 && v <= 35.5) ? 'good' : 'watch';
+  if (kind === 'resp') return (v >= 12 && v <= 20) ? 'good' : 'watch';
+  return 'norm';
+}
+function bioTile(label, val, unit, z) {
+  return '<div class="bioTile">' + (z ? '<span class="bioZone" data-z="' + z + '"></span>' : '')
+    + '<div class="bioLabel">' + label + '</div><div class="bioVal">' + val + (unit ? '<span class="bioUnit"> ' + unit + '</span>' : '') + '</div></div>';
+}
+function bioHtml(d) {
+  if (d.skinTemp == null && d.spo2 == null && d.respRate == null) return '';
+  return '<div class="bioGrid">'
+    + bioTile('Skin Temp', d.skinTemp != null ? d.skinTemp.toFixed(1) : '—', '°C', bioZone('skin', d.skinTemp))
+    + bioTile('Blood O₂', d.spo2 != null ? d.spo2.toFixed(1) : '—', '%', bioZone('spo2', d.spo2))
+    + bioTile('Resp Rate', d.respRate != null ? d.respRate.toFixed(1) : '—', 'br/min', bioZone('resp', d.respRate))
+    + '</div>';
+}
+
 /* ---- Today's call (verdict) — ported from the health page ---- */
 function verdictHtml(d) {
   const rec = d.recovery;
@@ -682,6 +734,8 @@ function buildLiveData(j) {
     date: 'today',
     recovery: j.recovery, hrv: j.hrv, rhr: j.rhr,
     sleepPerf: j.sleepPerf, sleepHours: j.sleepHours, strain: j.strain,
+    spo2: j.spo2 != null ? j.spo2 : null, skinTemp: j.skinTemp != null ? j.skinTemp : null,
+    respRate: j.respRate != null ? j.respRate : null, stages: j.stages || null,
     hrvBaseline: null, rhrBaseline: null, sleepPerfBaseline: null,
     strainWeeklyAvg: j.strainWeeklyAvg != null ? j.strainWeeklyAvg : null,
     hrvAnomalous: false,
@@ -796,7 +850,9 @@ function dataPanelHtml(d, kind) {
       + '<button type="button" class="btn btn-link" data-action="disconnect">disconnect</button>';
   return '<section class="panel">'
     + recoveryHeroHtml(d)
+    + sleepStagesHtml(d)
     + statGridHtml(d)
+    + bioHtml(d)
     + verdictHtml(d)
     + sleepDebtHtml(d)
     + coachHtml(d)

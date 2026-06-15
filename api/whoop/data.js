@@ -74,6 +74,17 @@ module.exports = async (req, res) => {
   const sleepPerf = pick(slp, ['score.sleep_performance_percentage', 'sleep_performance_percentage']);
   const sleepHours = asleepHours(slp);
   const strain = pick(cyc, ['score.strain', 'strain']);
+  // Extra biometrics + sleep-stage breakdown (granted by read:recovery / read:sleep)
+  const spo2 = pick(rec, ['score.spo2_percentage', 'spo2_percentage']);
+  const skinTemp = pick(rec, ['score.skin_temp_celsius', 'skin_temp_celsius']);
+  const respRate = pick(slp, ['score.respiratory_rate', 'respiratory_rate']);
+  const stMin = ms => (ms != null ? Math.round(ms / 60000) : null);
+  const stages = {
+    rem:   stMin(pick(slp, ['score.stage_summary.total_rem_sleep_time_milli'])),
+    deep:  stMin(pick(slp, ['score.stage_summary.total_slow_wave_sleep_time_milli'])),
+    light: stMin(pick(slp, ['score.stage_summary.total_light_sleep_time_milli'])),
+    awake: stMin(pick(slp, ['score.stage_summary.total_awake_time_milli'])),
+  };
 
   // History (oldest → newest) for the standalone's trend + sleep-debt views.
   const recoveryTrend = recs.map(r => pick(r, ['score.recovery_score', 'recovery_score'])).filter(v => v != null).reverse();
@@ -96,6 +107,10 @@ module.exports = async (req, res) => {
     sleepHours,
     sleepTargetHours: 8,
     strain: strain != null ? Math.round(strain * 10) / 10 : null,
+    spo2: spo2 != null ? Math.round(spo2 * 10) / 10 : null,
+    skinTemp: skinTemp != null ? Math.round(skinTemp * 10) / 10 : null,
+    respRate: respRate != null ? Math.round(respRate * 10) / 10 : null,
+    stages,
     recoveryTrend,
     sleepDebt7d,
     strainWeeklyAvg,
