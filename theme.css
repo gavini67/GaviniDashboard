@@ -12,18 +12,18 @@
 /* ---- Design tokens: default theme (Nocturne) ---- */
 :root {
   color-scheme: dark;
-  --bg: #0C0C12; --bg-elevated: #15151F;
+  --bg: #000000; --bg-elevated: #0a0a0a;
   --surface: rgba(255,255,255,0.028); --surface-2: rgba(255,255,255,0.055);
   --fg: #F3F2F8; --muted: rgba(243,242,248,0.50); --muted-strong: rgba(243,242,248,0.74);
   --border: rgba(255,255,255,0.08); --border-strong: rgba(255,255,255,0.17);
-  --brand: #8B7CFF; --brand-2: #C7BBFF; --brand-ink: #130E2E;
-  --brand-soft: rgba(139,124,255,0.12); --brand-line: rgba(139,124,255,0.28); --brand-glow: rgba(139,124,255,0.42);
+  --brand: #6EE7B7; --brand-2: #67E8F9; --brand-ink: #04130c;
+  --brand-soft: rgba(110,231,183,0.12); --brand-line: rgba(110,231,183,0.28); --brand-glow: rgba(110,231,183,0.42);
   --pos: #46E0A8; --pos-soft: rgba(70,224,168,0.12); --pos-line: rgba(70,224,168,0.26);
   --neg: #FB7185; --neg-soft: rgba(251,113,133,0.12); --neg-line: rgba(251,113,133,0.26);
   --warn: #FBBF24; --warn-soft: rgba(251,191,36,0.10); --warn-line: rgba(251,191,36,0.26);
   --track: rgba(255,255,255,0.06);
   --card-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 18px 44px -30px rgba(0,0,0,0.85);
-  --glow-1: rgba(139,124,255,0.12); --glow-2: rgba(70,224,168,0.05);
+  --glow-1: rgba(110,231,183,0.12); --glow-2: rgba(70,224,168,0.05);
   --grain-opacity: 0.05; --overlay: rgba(6,6,12,0.66);
   --space-1:.25rem; --space-2:.5rem; --space-3:.75rem; --space-4:1rem;
   --space-5:1.25rem; --space-6:1.5rem; --space-8:2rem; --space-10:2.5rem; --space-12:3rem; --space-16:4rem;
@@ -32,7 +32,7 @@
   --text-xl:1.375rem; --text-2xl:1.75rem; --text-3xl:2.5rem;
   --ease: cubic-bezier(0.2,0.8,0.2,1); --ease-premium: cubic-bezier(0.16,1,0.3,1);
   --duration-fast:120ms; --duration:200ms;
-  --font-display:'Space Grotesk'; --font-ui:'Hanken Grotesk'; --font-mono:'JetBrains Mono';
+  --font-display:'Instrument Serif'; --font-ui:'Inter'; --font-mono:'JetBrains Mono';
 }
 [data-theme="aurora"] {
   color-scheme: dark;
@@ -79,7 +79,7 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
 
 /* ---- Header (title + theme switcher + back link) ---- */
 .header { display:flex; align-items:flex-end; justify-content:space-between; gap: var(--space-4); margin-bottom: var(--space-8); flex-wrap: wrap; }
-.title { font-family: var(--font-display); font-weight: 600; font-size: var(--text-3xl); line-height: 1.0; letter-spacing: -0.03em; margin: 0; }
+.title { font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: var(--text-3xl); line-height: 1.0; letter-spacing: -0.03em; margin: 0; }
 .subtitle { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--muted); margin: 6px 0 0; }
 .headerControls { display:flex; align-items:center; gap: var(--space-3); flex-wrap: wrap; }
 .backLink { display:inline-flex; align-items:center; gap: 7px; padding: 7px 14px 7px 11px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-pill); color: var(--muted-strong); font-family: var(--font-ui); font-size: 12px; font-weight: 600; text-decoration:none; transition: border-color var(--duration) var(--ease-premium), background var(--duration) var(--ease-premium), color var(--duration) var(--ease-premium); }
