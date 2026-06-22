@@ -182,9 +182,10 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
 .artPills { background:linear-gradient(135deg,#070b09,#000); }
 .artPills i { position:absolute; width:34px; height:14px; border-radius:999px; background:rgba(110,231,183,.3); border:1px solid rgba(110,231,183,.5); animation:pFloatY 5s ease-in-out infinite; }
 @keyframes pFloatY { 0%,100%{ transform:translateY(0) rotate(var(--r,0)) } 50%{ transform:translateY(-7px) rotate(var(--r,0)) } }
-.artWave { background:linear-gradient(180deg,#04130d,#000); display:grid; place-items:center; overflow:hidden; }
-.artWave svg { width:200%; height:46%; opacity:.7; animation:pWaveX 6s linear infinite; }
-@keyframes pWaveX { to { transform:translateX(-50%) } }
+.artWave { background:linear-gradient(180deg,#04130d,#000); overflow:hidden; position:relative; }
+.artWave .waveTrack { position:absolute; left:0; top:50%; width:200%; height:46%; display:flex; animation:pWaveX 8s linear infinite; }
+.artWave svg { flex:0 0 50%; height:100%; opacity:.7; display:block; }
+@keyframes pWaveX { from { transform:translate(0,-50%) } to { transform:translate(-50%,-50%) } }
 .artTarget { background:linear-gradient(180deg,#04130d,#000); display:grid; place-items:center; }
 .pTgt { position:relative; width:92px; height:92px; }
 .pTgt i { position:absolute; inset:0; border-radius:50%; border:1px solid rgba(110,231,183,.25); }
@@ -555,7 +556,7 @@ function artHtml(type){
       + ['18%:28%:-10:0','58%:22%:16:.6','36%:58%:6:1.2','68%:60%:-14:1.8']
         .map(s=>{const[l,t,r,d]=s.split(':');return '<i style="left:'+l+';top:'+t+';transform:rotate('+r+'deg);animation-delay:'+d+'s"></i>';}).join('')
       + '</div>';
-    case 'waveform': return '<div class="pArt artWave"><svg viewBox="0 0 400 60" preserveAspectRatio="none"><path d="M0,30 Q25,6 50,30 T100,30 T150,30 T200,30 T250,30 T300,30 T350,30 T400,30" fill="none" stroke="#6EE7B7" stroke-width="2"/></svg></div>';
+    case 'waveform': { const w = '<svg viewBox="0 0 100 60" preserveAspectRatio="none"><path d="M0,30 Q25,6 50,30 T100,30" fill="none" stroke="#6EE7B7" stroke-width="2"/></svg>'; return '<div class="pArt artWave"><div class="waveTrack">' + w + w + '</div></div>'; }
     case 'target': return '<div class="pArt artTarget"><div class="pTgt"><i></i><i></i><i></i><b></b></div></div>';
     case 'line': return '<div class="pArt artLine"><svg viewBox="0 0 200 80" preserveAspectRatio="none"><polyline points="0,64 30,52 60,58 90,38 120,44 150,22 200,12" fill="none" stroke="#6EE7B7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
     case 'macrosplit': return '<div class="pArt artMacro"><div class="pMac"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="32" fill="none" stroke="#6EE7B7" stroke-width="9" stroke-dasharray="80 121"/><circle cx="40" cy="40" r="32" fill="none" stroke="#67E8F9" stroke-width="9" stroke-dasharray="55 146" stroke-dashoffset="-80"/><circle cx="40" cy="40" r="32" fill="none" stroke="#FBBF24" stroke-width="9" stroke-dasharray="40 161" stroke-dashoffset="-135"/></svg></div></div>';
