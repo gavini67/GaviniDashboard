@@ -232,11 +232,12 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
 .recRing { position: relative; width: 132px; height: 132px; display:grid; place-items:center; flex-shrink:0; }
 .recRing svg { position:absolute; inset:0; transform: rotate(-90deg); }
 .recTrack { fill:none; stroke: var(--track); stroke-width: 9; }
-.recFill { fill:none; stroke: currentColor; stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset 700ms var(--ease-premium); filter: drop-shadow(0 0 10px currentColor); }
-.recRing[data-tone="good"] .recFill { color: var(--pos); }
-.recRing[data-tone="watch"] .recFill { color: var(--warn); }
-.recRing[data-tone="low"] .recFill { color: var(--neg); }
-.recRing[data-tone="muted"] .recFill { color: var(--muted); }
+.recFill { fill:none; stroke: currentColor; stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset 700ms var(--ease-premium); }
+.recRing::before { content:''; position:absolute; inset:12px; border-radius:50%; box-shadow: 0 0 26px -2px currentColor; opacity:.4; pointer-events:none; }
+.recRing[data-tone="good"] { color: var(--pos); }
+.recRing[data-tone="watch"] { color: var(--warn); }
+.recRing[data-tone="low"] { color: var(--neg); }
+.recRing[data-tone="muted"] { color: var(--muted); }
 .recNum { font-family: var(--font-display); font-weight: 600; font-size: 2.5rem; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .recUnit { font-size: var(--text-base); color: var(--muted-strong); }
 .recCap { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
