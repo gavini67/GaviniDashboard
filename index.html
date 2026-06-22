@@ -214,6 +214,21 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
 .srcBadge { display:inline-flex; align-items:center; gap: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--border); color: var(--muted-strong); }
 .srcDot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 8px var(--brand-glow); }
 .vitalsBody { display:flex; align-items:center; gap: var(--space-6); flex-wrap: wrap; }
+.vRight { flex:1; min-width:230px; }
+.vVerdict { font-family:var(--font-display); font-style:italic; font-size:1.15rem; color:var(--brand); margin-bottom:13px; }
+.vCells { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.vCell { border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.02); padding:11px 13px; }
+.vCellRow { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.vcLab { font-family:var(--font-mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+.vcVal { font-family:var(--font-display); font-style:italic; font-size:20px; line-height:1; margin-top:5px; color:var(--fg); }
+.vcVal small { font-family:var(--font-mono); font-style:normal; font-size:10px; color:var(--muted); }
+.vcSide { font-family:var(--font-mono); font-size:11px; color:var(--brand); flex-shrink:0; }
+.vcBars { display:flex; gap:2px; align-items:flex-end; height:22px; flex-shrink:0; }
+.vcBars i { width:3px; height:100%; background:var(--brand); border-radius:2px; transform-origin:bottom; animation:vBar 1.3s ease-in-out infinite; }
+.vcBars i:nth-child(2){ animation-delay:.15s } .vcBars i:nth-child(3){ animation-delay:.3s } .vcBars i:nth-child(4){ animation-delay:.45s }
+@keyframes vBar { 0%,100%{ transform:scaleY(.45) } 50%{ transform:scaleY(1) } }
+@media (max-width:520px){ .vCells { grid-template-columns:1fr 1fr; } }
+@media (prefers-reduced-motion:reduce){ .vcBars i { animation:none } }
 .recRing { position: relative; width: 132px; height: 132px; display:grid; place-items:center; flex-shrink:0; }
 .recRing svg { position:absolute; inset:0; transform: rotate(-90deg); }
 .recTrack { fill:none; stroke: var(--track); stroke-width: 9; }
@@ -471,18 +486,20 @@ function vitalsTileHtml(){
   const ring = '<div class="recRing" data-tone="' + tone + '"><svg viewBox="0 0 132 132" aria-hidden><circle cx="66" cy="66" r="56" class="recTrack"/>'
     + (h.recovery != null ? '<circle cx="66" cy="66" r="56" class="recFill" style="stroke-dasharray:' + circ + ';stroke-dashoffset:' + (circ * (1 - h.recovery / 100)) + ';"/>' : '')
     + '</svg><div style="text-align:center"><div class="recNum">' + (h.recovery != null ? Math.round(h.recovery) : '—') + (h.recovery != null ? '<span class="recUnit">%</span>' : '') + '</div><div class="recCap">Recovery</div></div></div>';
-  function row(label, val){ return '<div class="vRow"><span class="vLabel">' + label + '</span><span class="vVal">' + val + '</span></div>'; }
-  const sleepVal = h.sleepHours != null ? formatHM(h.sleepHours) + (h.sleepPerf != null ? '<em>' + Math.round(h.sleepPerf) + '%</em>' : '') : '—';
-  const metrics = '<div class="vMetrics">'
-    + row('Sleep', sleepVal)
-    + (h.bedtime && h.wakeTime ? row('In bed', formatClock(h.bedtime) + ' <em>→</em> ' + formatClock(h.wakeTime)) : '')
-    + row('HRV', h.hrv != null ? Math.round(h.hrv) + '<em>ms</em>' : '—')
-    + row('Resting HR', h.rhr != null ? Math.round(h.rhr) + '<em>bpm</em>' : '—')
-    + '</div>';
+  let verdict = 'Recover — rest today.';
+  if (h.recovery != null && h.recovery >= 67) verdict = 'Primed — go hard today.';
+  else if (h.recovery != null && h.recovery >= 34) verdict = 'Moderate — train, don’t max out.';
+  function cell(label, val){ return '<div class="vCell"><div class="vcLab">' + label + '</div><div class="vcVal">' + val + '</div></div>'; }
+  const sleepCell = '<div class="vCell vCellRow"><div><div class="vcLab">Sleep</div><div class="vcVal">' + (h.sleepHours != null ? formatHM(h.sleepHours) : '—') + '</div></div>' + (h.sleepPerf != null ? '<span class="vcSide">' + Math.round(h.sleepPerf) + '%</span>' : '') + '</div>';
+  const hrvCell = '<div class="vCell vCellRow"><div><div class="vcLab">HRV</div><div class="vcVal">' + (h.hrv != null ? Math.round(h.hrv) + '<small> ms</small>' : '—') + '</div></div><span class="vcBars"><i></i><i></i><i></i><i></i></span></div>';
+  const rhrCell = cell('Resting HR', h.rhr != null ? Math.round(h.rhr) + '<small> bpm</small>' : '—');
+  const fourth = (h.strain != null) ? cell('Strain', (Math.round(h.strain * 10) / 10) + '<small> /21</small>')
+    : (h.bedtime && h.wakeTime) ? cell('In bed', formatClock(h.bedtime) + ' → ' + formatClock(h.wakeTime)) : cell('Source', esc(sourceLabel(h.source)));
+  const right = '<div class="vRight"><div class="vVerdict">' + verdict + '</div><div class="vCells">' + sleepCell + hrvCell + rhrCell + fourth + '</div></div>';
   return '<section class="vitals">'
     + '<div class="vitalsHead"><span class="vitalsEyebrow">Today’s vitals</span>'
     + '<span class="srcBadge"><span class="srcDot"></span>' + esc(sourceLabel(h.source)) + '</span></div>'
-    + '<div class="vitalsBody">' + ring + metrics + '</div>'
+    + '<div class="vitalsBody">' + ring + right + '</div>'
     + '<div class="vitalsFoot"><span class="vitalsSync">' + (h.ts ? 'updated ' + ago(h.ts) : '') + '</span>'
     + '<button type="button" class="btn btn-ghost" data-action="open-vitals">Update vitals</button></div></section>';
 }
