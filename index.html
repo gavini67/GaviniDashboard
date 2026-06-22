@@ -173,7 +173,31 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
 .artGem svg { animation:pFlo 6s ease-in-out infinite; }
 @keyframes pFlo { 0%,100%{ transform:translateY(0) rotate(-3deg) } 50%{ transform:translateY(-6px) rotate(3deg) } }
 @keyframes pTw { 0%,100%{ opacity:.25; transform:scale(.8) } 50%{ opacity:1; transform:scale(1.3) } }
-@media (prefers-reduced-motion:reduce){ .poster,.artGrid,.artFin span,.pRadar b,.pOrb,.artBars span,.artGem svg,.poster>.pDot { animation:none !important } .poster { opacity:1; transform:none } }
+.artFin { padding:24px 26px; }
+.artBars span { height:54px; }
+.artRipple { background:linear-gradient(180deg,#04130d,#000); display:grid; place-items:center; }
+.artRipple span { position:absolute; width:34px; height:34px; border-radius:50%; border:1.5px solid rgba(110,231,183,.55); animation:pRip 3s ease-out infinite; }
+.artRipple span:nth-child(2){ animation-delay:1s } .artRipple span:nth-child(3){ animation-delay:2s }
+@keyframes pRip { 0%{ transform:scale(.4); opacity:.85 } 100%{ transform:scale(2.7); opacity:0 } }
+.artPills { background:linear-gradient(135deg,#070b09,#000); }
+.artPills i { position:absolute; width:34px; height:14px; border-radius:999px; background:rgba(110,231,183,.3); border:1px solid rgba(110,231,183,.5); animation:pFloatY 5s ease-in-out infinite; }
+@keyframes pFloatY { 0%,100%{ transform:translateY(0) rotate(var(--r,0)) } 50%{ transform:translateY(-7px) rotate(var(--r,0)) } }
+.artWave { background:linear-gradient(180deg,#04130d,#000); display:grid; place-items:center; overflow:hidden; }
+.artWave svg { width:150%; height:46%; opacity:.7; animation:pWaveX 5s linear infinite; }
+@keyframes pWaveX { to { transform:translateX(-33.33%) } }
+.artTarget { background:linear-gradient(180deg,#04130d,#000); display:grid; place-items:center; }
+.pTgt { position:relative; width:92px; height:92px; }
+.pTgt i { position:absolute; inset:0; border-radius:50%; border:1px solid rgba(110,231,183,.25); }
+.pTgt i:nth-child(2){ inset:22px } .pTgt i:nth-child(3){ inset:44px }
+.pTgt b { position:absolute; inset:40px; border-radius:50%; background:#6EE7B7; box-shadow:0 0 12px #6EE7B7; animation:pOrbP 2.4s ease-in-out infinite; }
+.artLine { background:linear-gradient(180deg,#04130d,#000); display:grid; place-items:center; }
+.artLine svg { width:86%; height:62%; }
+.artLine polyline { filter:drop-shadow(0 0 5px rgba(110,231,183,.5)); stroke-dasharray:430; stroke-dashoffset:430; animation:pDraw 1.8s var(--ease-premium) forwards; }
+@keyframes pDraw { to { stroke-dashoffset:0 } }
+.artMacro { background:linear-gradient(180deg,#04130d,#000); display:grid; place-items:center; }
+.pMac { animation:pSpin 26s linear infinite; }
+@keyframes pSpin { to { transform:rotate(360deg) } }
+@media (prefers-reduced-motion:reduce){ .poster,.artGrid,.artFin span,.pRadar b,.pOrb,.artBars span,.artGem svg,.poster>.pDot,.artRipple span,.artPills i,.artWave svg,.pTgt b,.artLine polyline,.pMac { animation:none !important } .poster { opacity:1; transform:none } .artLine polyline{ stroke-dashoffset:0 } }
 .cardTag { font-size: 12px; color: var(--muted); line-height: 1.4; }
 .cardArrow { position:absolute; top: var(--space-5); right: var(--space-5); color: var(--muted); font-size: 16px; transition: color var(--duration) var(--ease-premium), transform var(--duration) var(--ease-premium); }
 .card:hover .cardArrow { color: var(--brand); transform: translate(2px,-2px); }
@@ -183,7 +207,7 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
 .cardStatLabel { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 
 /* Vitals tile */
-.vitals { grid-column: span 2; grid-row: span 2; display:flex; flex-direction:column; gap: var(--space-4); padding: var(--space-6); border: 1px solid var(--brand-line); border-radius: var(--radius-lg); background: var(--brand-soft); box-shadow: 0 0 50px -24px var(--brand-glow), var(--card-shadow); }
+.vitals { grid-column: span 2; grid-row: span 2; display:flex; flex-direction:column; gap: var(--space-4); padding: var(--space-6); border: 1px solid var(--brand-line); border-radius: 18px; background: radial-gradient(130% 90% at 88% 6%, rgba(110,231,183,0.07), transparent 58%), linear-gradient(180deg, #04130d, #000); box-shadow: var(--card-shadow); }
 @media (max-width: 520px) { .vitals { grid-column: span 1; grid-row: auto; } }
 .vitalsHead { display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); flex-wrap:wrap; }
 .vitalsEyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--brand); }
@@ -299,17 +323,17 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
  * Apps in the suite — one bento card each.
  * ============================================================ */
 const APPS = [
-  { file: 'finance.html',     name: 'Finance',     tag: 'Net worth · subs · orders · wishlist', icon: '💰', wide: true, art: 'candles' },
-  { file: 'gym.html',         name: 'Gym',         tag: 'Progressive overload coach',           icon: '🏋️', wide: true, art: 'bars' },
-  { file: 'supplements.html', name: 'Supplements', tag: 'Your stack + smart recommendations',   icon: '💊', art: 'grid' },
-  { file: 'whoop.html',       name: 'Fitness Band', tag: 'Whoop · Fitbit · Apple Watch sync',      icon: '🔋', art: 'radar' },
-  { file: 'water.html',       name: 'Water',       tag: 'Daily hydration target',                icon: '💧', art: 'orb' },
-  { file: 'creator.html',     name: 'Creator',     tag: 'Schedule · accounts · analytics',       icon: '🎬', art: 'grid' },
-  { file: 'goals.html',       name: 'Goals',       tag: 'Goals & streaks',                       icon: '🎯', art: 'radar' },
-  { file: 'progress.html',    name: 'Progress',    tag: 'Photos & measurements',                 icon: '📈', art: 'dots' },
-  { file: 'macros.html',      name: 'Macros',      tag: 'Protein · carbs · fat',                 icon: '🍳', art: 'orb' },
-  { file: 'peak.html',        name: 'Peak',        tag: 'Energy · caffeine · schedule',           icon: '⚡', art: 'dots' },
-  { file: 'mentor.html',      name: 'Mentor',      tag: 'Nova · AI mentor across your data',      icon: '✦', wide: true, art: 'gem' },
+  { file: 'finance.html',     name: 'Finance',     tag: 'Net worth · subs · orders',  icon: '💰', wide: true, art: 'candles' },
+  { file: 'gym.html',         name: 'Gym',         tag: 'Progressive overload',       icon: '🏋️', wide: true, art: 'bars' },
+  { file: 'supplements.html', name: 'Supplements', tag: 'Daily stack',                icon: '💊', art: 'pills' },
+  { file: 'whoop.html',       name: 'Fitness Band', tag: 'Recovery · sleep · strain',  icon: '🔋', art: 'radar' },
+  { file: 'water.html',       name: 'Water',       tag: 'Hydration target',           icon: '💧', art: 'ripple' },
+  { file: 'creator.html',     name: 'Creator',     tag: 'Schedule · analytics',       icon: '🎬', art: 'waveform' },
+  { file: 'goals.html',       name: 'Goals',       tag: 'Goals & streaks',            icon: '🎯', art: 'target' },
+  { file: 'progress.html',    name: 'Progress',    tag: 'Photos & measurements',      icon: '📈', art: 'line' },
+  { file: 'macros.html',      name: 'Macros',      tag: 'Protein · carbs · fat',      icon: '🍳', art: 'macrosplit' },
+  { file: 'peak.html',        name: 'Peak',        tag: 'Energy · schedule',          icon: '⚡', art: 'dots' },
+  { file: 'mentor.html',      name: 'Mentor',      tag: 'Nova · AI across your data',  icon: '✦', wide: true, art: 'gem' },
 ];
 
 /* ============================================================
@@ -474,6 +498,7 @@ function statFor(file){
     else if (file === 'supplements.html') { const s = lsGet('supplements_standalone_v1'); if (s && Array.isArray(s.items) && s.items.length) { const tk = (s.taken && s.taken[activeDateKey()]) || {}; const n = s.items.filter(i => tk[i.id]).length; return { value: n + '/' + s.items.length, label: 'taken today' }; } }
     else if (file === 'water.html') { const s = lsGet('water_standalone_v1'); if (s && s.logs) { const n = s.logs[localDateKey()] || 0; return { value: String(n), label: (n === 1 ? 'drink' : 'drinks') + ' today' }; } }
     else if (file === 'whoop.html') { if (health && health.recovery != null) return { value: Math.round(health.recovery) + '%', label: 'recovery' }; }
+    else if (file === 'macros.html') { const s = lsGet('macros_standalone_v1'); if (s) { const log = s[localDateKey()] || []; if (Array.isArray(log) && log.length) { const cal = Math.round(log.reduce((a,x)=>a+(Number(x.cal)||0),0)); return { value: fmtNum(cal), label: 'kcal today' }; } } }
   } catch (e) {}
   return null;
 }
@@ -497,17 +522,26 @@ function iconSvg(file){
 function artHtml(type){
   switch(type){
     case 'candles': return '<div class="pArt artFin">'
-      + ['42:6EE7B7:0','58:F87171:.3','34:6EE7B7:.6','66:6EE7B7:.9','48:F87171:1.2','72:6EE7B7:1.5','54:6EE7B7:1.8']
+      + ['48:6EE7B7:0','72:F87171:.25','40:6EE7B7:.5','84:6EE7B7:.75','58:F87171:1','90:6EE7B7:1.25','64:6EE7B7:1.5','76:6EE7B7:1.75']
         .map(s=>{const[h,c,d]=s.split(':');return '<span style="height:'+h+'px;background:#'+c+';animation-delay:'+d+'s"></span>';}).join('')
       + '</div>';
+    case 'bars': return '<div class="pArt artBars">'+[0,.15,.3,.45,.6,.75,.9].map(d=>'<span style="animation-delay:'+d+'s"></span>').join('')+'</div>';
     case 'dots': return '<div class="pArt artDots"></div>'
       + '<span class="pDot" style="left:24%;top:40%;background:#6EE7B7;box-shadow:0 0 10px #6EE7B7"></span>'
       + '<span class="pDot" style="left:62%;top:30%;background:#FBBF24;box-shadow:0 0 10px #FBBF24;animation-delay:.7s"></span>'
       + '<span class="pDot" style="left:48%;top:62%;background:#6EE7B7;box-shadow:0 0 12px #6EE7B7;animation-delay:1.3s"></span>';
     case 'radar': return '<div class="pArt artVit"><div class="pRadar"><i></i><i></i><i></i><b></b></div></div>';
     case 'orb': return '<div class="pArt artOrb"><div class="pOrb"></div></div>';
-    case 'bars': return '<div class="pArt artBars">'+[0,.2,.4,.6].map(d=>'<span style="animation-delay:'+d+'s"></span>').join('')+'</div>';
-    case 'gem': return '<div class="pArt artGem"><svg viewBox="0 0 68 68" width="74" height="74"><polygon points="34,5 58,22 34,36" fill="rgba(110,231,183,.5)"/><polygon points="34,5 10,22 34,36" fill="rgba(110,231,183,.26)"/><polygon points="34,36 58,22 58,46 34,63" fill="rgba(110,231,183,.34)"/><polygon points="34,36 10,22 10,46 34,63" fill="rgba(110,231,183,.18)"/></svg></div>';
+    case 'ripple': return '<div class="pArt artRipple"><span></span><span></span><span></span></div>';
+    case 'pills': return '<div class="pArt artPills">'
+      + ['18%:28%:-10:0','58%:22%:16:.6','36%:58%:6:1.2','68%:60%:-14:1.8']
+        .map(s=>{const[l,t,r,d]=s.split(':');return '<i style="left:'+l+';top:'+t+';transform:rotate('+r+'deg);animation-delay:'+d+'s"></i>';}).join('')
+      + '</div>';
+    case 'waveform': return '<div class="pArt artWave"><svg viewBox="0 0 300 60" preserveAspectRatio="none"><path d="M0,30 Q25,4 50,30 T100,30 T150,30 T200,30 T250,30 T300,30" fill="none" stroke="#6EE7B7" stroke-width="2"/></svg></div>';
+    case 'target': return '<div class="pArt artTarget"><div class="pTgt"><i></i><i></i><i></i><b></b></div></div>';
+    case 'line': return '<div class="pArt artLine"><svg viewBox="0 0 200 80" preserveAspectRatio="none"><polyline points="0,64 30,52 60,58 90,38 120,44 150,22 200,12" fill="none" stroke="#6EE7B7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+    case 'macrosplit': return '<div class="pArt artMacro"><div class="pMac"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="32" fill="none" stroke="#6EE7B7" stroke-width="9" stroke-dasharray="80 121"/><circle cx="40" cy="40" r="32" fill="none" stroke="#67E8F9" stroke-width="9" stroke-dasharray="55 146" stroke-dashoffset="-80"/><circle cx="40" cy="40" r="32" fill="none" stroke="#FBBF24" stroke-width="9" stroke-dasharray="40 161" stroke-dashoffset="-135"/></svg></div></div>';
+    case 'gem': return '<div class="pArt artGem"><svg viewBox="0 0 68 68" width="96" height="96"><polygon points="34,5 58,22 34,36" fill="rgba(110,231,183,.5)"/><polygon points="34,5 10,22 34,36" fill="rgba(110,231,183,.26)"/><polygon points="34,36 58,22 58,46 34,63" fill="rgba(110,231,183,.34)"/><polygon points="34,36 10,22 10,46 34,63" fill="rgba(110,231,183,.18)"/></svg></div>';
     default: return '<div class="pArt artGrid"></div>';
   }
 }
