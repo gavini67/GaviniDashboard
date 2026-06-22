@@ -310,7 +310,6 @@ const APPS = [
   { file: 'macros.html',      name: 'Macros',      tag: 'Protein · carbs · fat',                 icon: '🍳', art: 'orb' },
   { file: 'peak.html',        name: 'Peak',        tag: 'Energy · caffeine · schedule',           icon: '⚡', art: 'dots' },
   { file: 'mentor.html',      name: 'Mentor',      tag: 'Nova · AI mentor across your data',      icon: '✦', wide: true, art: 'gem' },
-  { file: 'design-lab.html',  name: 'Design Lab',  tag: 'Color · type · components · tokens',     icon: '🎨', art: 'grid' },
 ];
 
 /* ============================================================
@@ -490,8 +489,7 @@ function iconSvg(file){
     'progress.html':  'M4 17l5-5 3 3 7-8M4 20h16',
     'macros.html':    'M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3 2-4 1 2 3 1 3-5z',
     'peak.html':      'M13 3L4 14h7l-1 7 9-11h-7z',
-    'mentor.html':    'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z',
-    'design-lab.html':'M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2 0-1.5 1-2 2-2h1a4 4 0 0 0 4-4 9 9 0 0 0-9-8z'
+    'mentor.html':    'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z'
   };
   const d = P[file] || 'M12 4v16M4 12h16';
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="'+d+'"/></svg>';
