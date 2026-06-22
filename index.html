@@ -136,6 +136,44 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
 .card:hover { border-color: var(--brand-line); background: var(--brand-soft); transform: translateY(-2px); box-shadow: 0 0 40px -18px var(--brand-glow), var(--card-shadow); }
 .cardIcon { display:grid; place-items:center; width: 42px; height: 42px; border-radius: 13px; background: var(--brand-soft); border: 1px solid var(--brand-line); font-size: 20px; flex-shrink:0; }
 .cardName { font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: 1.25rem; letter-spacing: 0; }
+.title em.titleName { font-style: italic; color: var(--brand); }
+.poster { position:relative; overflow:hidden; min-height:150px; border:1px solid var(--border); border-radius:18px; background:var(--surface); text-decoration:none; color:var(--fg); display:block; isolation:isolate; opacity:0; transform:translateY(12px) scale(.97); animation:posterIn .8s var(--ease-premium) forwards; transition:border-color var(--duration) var(--ease-premium), transform var(--duration) var(--ease-premium), box-shadow var(--duration) var(--ease-premium); }
+@keyframes posterIn { to { opacity:1; transform:none } }
+.poster:hover { border-color:var(--brand-line); box-shadow:0 0 40px -16px var(--brand-glow); transform:translateY(-2px); }
+.posterWide { grid-column:span 2; }
+@media (max-width:520px){ .posterWide { grid-column:span 1; } }
+.pArt { position:absolute; inset:0; z-index:0; }
+.poster > .pDot { position:absolute; z-index:1; width:8px; height:8px; border-radius:50%; animation:pTw 2.2s ease-in-out infinite; }
+.pIdx { position:absolute; top:16px; left:18px; z-index:2; font-family:var(--font-display); font-style:italic; font-size:.95rem; color:rgba(255,255,255,.4); }
+.pIc { position:absolute; top:14px; right:16px; z-index:2; font-size:18px; filter:saturate(.4) brightness(1.4); }
+.pFoot { position:absolute; left:18px; bottom:15px; right:44px; z-index:2; display:flex; flex-direction:column; gap:3px; }
+.pName { font-family:var(--font-display); font-style:italic; font-size:1.4rem; line-height:1; color:#fff; }
+.pSub { font-family:var(--font-mono); font-size:10px; letter-spacing:.04em; color:rgba(255,255,255,.5); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pArrow { position:absolute; right:16px; bottom:15px; z-index:2; color:rgba(255,255,255,.5); font-size:16px; transition:transform .2s var(--ease-premium), color .2s; }
+.poster:hover .pArrow { color:var(--brand); transform:translateX(3px); }
+.artGrid { background:repeating-linear-gradient(45deg,transparent 0 22px,rgba(110,231,183,.05) 22px 23px),repeating-linear-gradient(-45deg,transparent 0 22px,rgba(255,255,255,.025) 22px 23px),linear-gradient(135deg,#050a08,#000); animation:pGrid 40s linear infinite; }
+@keyframes pGrid { to { background-position:220px 0,-220px 0,0 0 } }
+.artDots { background:radial-gradient(circle,rgba(110,231,183,.22) 1px,transparent 1.6px) 0 0/15px 15px,radial-gradient(ellipse 60% 80% at 50% 50%,rgba(110,231,183,.08),transparent 65%),linear-gradient(180deg,#04130d,#000); }
+.artFin { background:linear-gradient(135deg,#0a0f0d,#000); display:flex; align-items:flex-end; justify-content:space-around; padding:26px 22px; }
+.artFin span { width:7px; border-radius:2px; transform-origin:bottom; animation:pCdl 2.6s ease-in-out infinite; }
+@keyframes pCdl { 0%,100%{ transform:scaleY(.7) } 50%{ transform:scaleY(1) } }
+.artVit { background:linear-gradient(180deg,#04130d,#000); display:grid; place-items:center; }
+.pRadar { position:relative; width:96px; height:96px; }
+.pRadar i { position:absolute; inset:0; border-radius:50%; border:1px solid rgba(110,231,183,.22); }
+.pRadar i:nth-child(2){ inset:18px } .pRadar i:nth-child(3){ inset:36px }
+.pRadar b { position:absolute; inset:0; border-radius:50%; background:conic-gradient(from 0deg,rgba(110,231,183,.4),transparent 35%); animation:pSweep 3.5s linear infinite; }
+@keyframes pSweep { to { transform:rotate(360deg) } }
+.artOrb { background:linear-gradient(180deg,#04130d,#000); display:grid; place-items:center; }
+.pOrb { width:54px; height:54px; border-radius:50%; background:radial-gradient(circle,#6EE7B7,rgba(110,231,183,.1) 70%); box-shadow:0 0 30px rgba(110,231,183,.55); animation:pOrbP 3s ease-in-out infinite; }
+@keyframes pOrbP { 0%,100%{ transform:scale(.85); opacity:.65 } 50%{ transform:scale(1.1); opacity:1 } }
+.artBars { background:linear-gradient(135deg,#070b09,#000); display:flex; align-items:flex-end; justify-content:center; gap:6px; padding:26px 0; }
+.artBars span { width:9px; height:42px; background:#6EE7B7; border-radius:2px; transform-origin:bottom; animation:pBars 1.4s ease-in-out infinite; }
+@keyframes pBars { 0%,100%{ transform:scaleY(.4) } 50%{ transform:scaleY(1) } }
+.artGem { background:radial-gradient(ellipse 70% 60% at 72% 55%,rgba(110,231,183,.12),transparent 70%),linear-gradient(180deg,#06100c,#000); display:flex; align-items:center; justify-content:flex-end; padding-right:22px; }
+.artGem svg { animation:pFlo 6s ease-in-out infinite; }
+@keyframes pFlo { 0%,100%{ transform:translateY(0) rotate(-3deg) } 50%{ transform:translateY(-6px) rotate(3deg) } }
+@keyframes pTw { 0%,100%{ opacity:.25; transform:scale(.8) } 50%{ opacity:1; transform:scale(1.3) } }
+@media (prefers-reduced-motion:reduce){ .poster,.artGrid,.artFin span,.pRadar b,.pOrb,.artBars span,.artGem svg,.poster>.pDot { animation:none !important } .poster { opacity:1; transform:none } }
 .cardTag { font-size: 12px; color: var(--muted); line-height: 1.4; }
 .cardArrow { position:absolute; top: var(--space-5); right: var(--space-5); color: var(--muted); font-size: 16px; transition: color var(--duration) var(--ease-premium), transform var(--duration) var(--ease-premium); }
 .card:hover .cardArrow { color: var(--brand); transform: translate(2px,-2px); }
@@ -261,18 +299,18 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
  * Apps in the suite — one bento card each.
  * ============================================================ */
 const APPS = [
-  { file: 'finance.html',     name: 'Finance',     tag: 'Net worth · subs · orders · wishlist', icon: '💰', wide: true },
-  { file: 'gym.html',         name: 'Gym',         tag: 'Progressive overload coach',           icon: '🏋️', wide: true },
-  { file: 'supplements.html', name: 'Supplements', tag: 'Your stack + smart recommendations',   icon: '💊' },
-  { file: 'whoop.html',       name: 'Fitness Band', tag: 'Whoop · Fitbit · Apple Watch sync',      icon: '🔋' },
-  { file: 'water.html',       name: 'Water',       tag: 'Daily hydration target',                icon: '💧' },
-  { file: 'creator.html',     name: 'Creator',     tag: 'Schedule · accounts · analytics',       icon: '🎬' },
-  { file: 'goals.html',       name: 'Goals',       tag: 'Goals & streaks',                       icon: '🎯' },
-  { file: 'progress.html',    name: 'Progress',    tag: 'Photos & measurements',                 icon: '📈' },
-  { file: 'macros.html',      name: 'Macros',      tag: 'Protein · carbs · fat',                 icon: '🍳' },
-  { file: 'peak.html',        name: 'Peak',        tag: 'Energy · caffeine · schedule',           icon: '⚡' },
-  { file: 'mentor.html',      name: 'Mentor',      tag: 'Nova · AI mentor across your data',      icon: '✦', wide: true },
-  { file: 'design-lab.html',  name: 'Design Lab',  tag: 'Color · type · components · tokens',     icon: '🎨' },
+  { file: 'finance.html',     name: 'Finance',     tag: 'Net worth · subs · orders · wishlist', icon: '💰', wide: true, art: 'candles' },
+  { file: 'gym.html',         name: 'Gym',         tag: 'Progressive overload coach',           icon: '🏋️', wide: true, art: 'bars' },
+  { file: 'supplements.html', name: 'Supplements', tag: 'Your stack + smart recommendations',   icon: '💊', art: 'grid' },
+  { file: 'whoop.html',       name: 'Fitness Band', tag: 'Whoop · Fitbit · Apple Watch sync',      icon: '🔋', art: 'radar' },
+  { file: 'water.html',       name: 'Water',       tag: 'Daily hydration target',                icon: '💧', art: 'orb' },
+  { file: 'creator.html',     name: 'Creator',     tag: 'Schedule · accounts · analytics',       icon: '🎬', art: 'grid' },
+  { file: 'goals.html',       name: 'Goals',       tag: 'Goals & streaks',                       icon: '🎯', art: 'radar' },
+  { file: 'progress.html',    name: 'Progress',    tag: 'Photos & measurements',                 icon: '📈', art: 'dots' },
+  { file: 'macros.html',      name: 'Macros',      tag: 'Protein · carbs · fat',                 icon: '🍳', art: 'orb' },
+  { file: 'peak.html',        name: 'Peak',        tag: 'Energy · caffeine · schedule',           icon: '⚡', art: 'dots' },
+  { file: 'mentor.html',      name: 'Mentor',      tag: 'Nova · AI mentor across your data',      icon: '✦', wide: true, art: 'gem' },
+  { file: 'design-lab.html',  name: 'Design Lab',  tag: 'Color · type · components · tokens',     icon: '🎨', art: 'grid' },
 ];
 
 /* ============================================================
@@ -383,11 +421,16 @@ const ui = { modalOpen: false, draftSource: 'manual', profileOpen: false, profil
  * ============================================================ */
 function headerHtml(){
   const name = firstName();
-  const greeting = name ? 'Welcome back, ' + esc(name) : 'Your dashboard · everything in one place';
+  const h = new Date().getHours();
+  const part = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  const title = name
+    ? part + ', <em class="titleName">' + esc(name) + '</em>'
+    : 'Your <em class="titleName">dashboard</em>';
+  const dateStr = new Date().toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
   const chip = profile
     ? '<button type="button" class="profileChip" data-action="open-profile" title="Edit your profile"><span class="profileAvatar">' + esc((name || '·').charAt(0).toUpperCase()) + '</span>' + esc(name || 'Profile') + '</button>'
     : '<button type="button" class="profileChip profileChipNew" data-action="open-profile">Set up profile</button>';
-  return '<header class="header"><div><h1 class="title">Gavin</h1><p class="subtitle">' + greeting + '</p></div>'
+  return '<header class="header"><div><h1 class="title">' + title + '</h1><p class="subtitle">' + dateStr + '</p></div>'
     + '<div class="headerControls">' + themeSegHtml() + chip + '<button type="button" class="gearBtn" data-action="open-profile" title="Settings" aria-label="Open settings">⚙</button></div></header>';
 }
 
@@ -435,15 +478,33 @@ function statFor(file){
   } catch (e) {}
   return null;
 }
+function artHtml(type){
+  switch(type){
+    case 'candles': return '<div class="pArt artFin">'
+      + ['42:6EE7B7:0','58:F87171:.3','34:6EE7B7:.6','66:6EE7B7:.9','48:F87171:1.2','72:6EE7B7:1.5','54:6EE7B7:1.8']
+        .map(s=>{const[h,c,d]=s.split(':');return '<span style="height:'+h+'px;background:#'+c+';animation-delay:'+d+'s"></span>';}).join('')
+      + '</div>';
+    case 'dots': return '<div class="pArt artDots"></div>'
+      + '<span class="pDot" style="left:24%;top:40%;background:#6EE7B7;box-shadow:0 0 10px #6EE7B7"></span>'
+      + '<span class="pDot" style="left:62%;top:30%;background:#FBBF24;box-shadow:0 0 10px #FBBF24;animation-delay:.7s"></span>'
+      + '<span class="pDot" style="left:48%;top:62%;background:#6EE7B7;box-shadow:0 0 12px #6EE7B7;animation-delay:1.3s"></span>';
+    case 'radar': return '<div class="pArt artVit"><div class="pRadar"><i></i><i></i><i></i><b></b></div></div>';
+    case 'orb': return '<div class="pArt artOrb"><div class="pOrb"></div></div>';
+    case 'bars': return '<div class="pArt artBars">'+[0,.2,.4,.6].map(d=>'<span style="animation-delay:'+d+'s"></span>').join('')+'</div>';
+    case 'gem': return '<div class="pArt artGem"><svg viewBox="0 0 68 68" width="74" height="74"><polygon points="34,5 58,22 34,36" fill="rgba(110,231,183,.5)"/><polygon points="34,5 10,22 34,36" fill="rgba(110,231,183,.26)"/><polygon points="34,36 58,22 58,46 34,63" fill="rgba(110,231,183,.34)"/><polygon points="34,36 10,22 10,46 34,63" fill="rgba(110,231,183,.18)"/></svg></div>';
+    default: return '<div class="pArt artGrid"></div>';
+  }
+}
 function cardHtml(a){
   const st = statFor(a.file);
-  const tail = st
-    ? '<div class="cardStat"><span class="cardStatValue">' + esc(st.value) + '</span><span class="cardStatLabel">' + esc(st.label) + '</span></div>'
-    : '<p class="cardTag">' + esc(a.tag) + '</p>';
-  return '<a class="card' + (a.wide ? ' tileWide' : '') + '" href="' + a.file + '">'
-    + '<span class="cardArrow" aria-hidden>↗</span>'
-    + '<div class="cardTop"><span class="cardIcon" aria-hidden>' + a.icon + '</span><span class="cardName">' + esc(a.name) + '</span></div>'
-    + tail + '</a>';
+  const sub = st ? esc(st.value) + ' · ' + esc(st.label) : esc(a.tag);
+  const num = String(APPS.indexOf(a) + 1).padStart(2, '0');
+  return '<a class="poster' + (a.wide ? ' posterWide' : '') + '" href="' + a.file + '">'
+    + artHtml(a.art)
+    + '<span class="pIdx">' + num + '</span>'
+    + '<span class="pIc" aria-hidden>' + a.icon + '</span>'
+    + '<div class="pFoot"><span class="pName">' + esc(a.name) + '</span><span class="pSub">' + sub + '</span></div>'
+    + '<span class="pArrow" aria-hidden>→</span></a>';
 }
 
 /* ============================================================
