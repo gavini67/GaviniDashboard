@@ -906,7 +906,10 @@ function renderScheduleCard() {
     </span>`;
   }).join('');
   return `<div class="card" style="padding:22px 24px 20px">
-    <div class="curveEyebrow">Schedule</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
+      <div class="curveEyebrow" style="margin-bottom:0">Schedule</div>
+      ${sorted.length?`<button data-action="clear-all-sch" style="background:none;border:none;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer;padding:0;transition:color .15s" onmouseover="this.style.color='#F87171'" onmouseout="this.style.color='var(--muted)'">Clear All</button>`:''}
+    </div>
     ${nowHtml}
     <div class="schRow" style="margin-bottom:16px">${chips||'<span class="planEmpty">No events yet — add one below</span>'}</div>
     <div class="schCard">
@@ -1142,6 +1145,8 @@ document.addEventListener('click', function(e) {
     if(!label||!tv) return;
     S.schedule.push({id:uid(),label,startMin:timeToMin(tv),dur,color:_schColor});
     save(); renderAll();
+  } else if(action==='clear-all-sch') {
+    S.schedule=[]; save(); renderAll();
   } else if(action==='remove-sch') {
     S.schedule=S.schedule.filter(s=>s.id!==el.dataset.id);
     save(); renderAll();
